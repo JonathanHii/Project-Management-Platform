@@ -94,7 +94,14 @@
 			<artifactId>spring-boot-configuration-processor</artifactId>
 			<optional>true</optional>
 		</dependency>
-	</dependencies>
+	
+   <dependency>
+     <groupId>org.springframework</groupId>
+     <artifactId>spring-web</artifactId>
+     <version>5.1.9.RELEASE</version>
+   </dependency>
+ 
+ </dependencies>
 
 	<build>
 		<plugins>
