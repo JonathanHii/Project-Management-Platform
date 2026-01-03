@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { homeService } from "@/services/homeService";
+import { dashboardService } from "@/services/dashboardService";
 import { authService } from "@/services/authService";
 import { useRouter } from "next/navigation";
 
-export default function HomePage() {
+export default function Dashboard() {
   const [message, setMessage] = useState<string>("Loading...");
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -13,7 +13,7 @@ export default function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const data = await homeService.getWelcomeMessage();
+        const data = await dashboardService.getWelcomeMessage();
         setMessage(data.message);
       } catch (err: any) {
         setError(err.message);
@@ -31,7 +31,7 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
       <div className="w-full max-w-md rounded-2xl bg-white p-10 text-center shadow-xl">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Strideboard Home</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Strideboard Dashboard</h1>
         
         <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
           {error ? (

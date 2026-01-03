@@ -2,7 +2,7 @@ import { authService } from "./authService";
 
 const API_BASE_URL = "http://localhost:8080";
 
-export const homeService = {
+export const dashboardService = {
   /**
    * Fetches the welcome message from the backend root "/"
    * @returns Promise<{ message: string }>

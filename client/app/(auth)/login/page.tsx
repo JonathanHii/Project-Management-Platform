@@ -16,7 +16,7 @@ export default function LoginPage() {
     try {
       await authService.login(email, password);
       // Redirect to the home page after successful login
-      router.push("/home");
+      router.push("/dashboard");
     } catch (err) {
       alert("Invalid credentials!");
     } finally {
@@ -59,7 +59,7 @@ export default function LoginPage() {
             href="/register"
             className="text-blue-600 font-semibold hover:underline"
           >
-            Sign Up
+            Register
           </Link>
         </div>
       </form>
