@@ -3,6 +3,7 @@ package com.strideboard.data.user;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.strideboard.data.workspace.Membership;
 
 import jakarta.persistence.CascadeType;
@@ -39,6 +40,7 @@ public class User {
 
     private String fullName;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Membership> memberships;
 
