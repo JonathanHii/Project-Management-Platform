@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -34,4 +35,16 @@ public class Workspace {
     @JsonIgnore
     @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL)
     private List<Membership> memberships;
+
+    @JsonProperty("memberCount")
+    public int getMemberCount() {
+        return memberships != null ? memberships.size() : 0;
+    }
+
+    @JsonProperty("projectCount")
+    public int getProjectCount() {
+        // Return projects.size() once projects are implemented
+        return 0;
+    }
+
 }
