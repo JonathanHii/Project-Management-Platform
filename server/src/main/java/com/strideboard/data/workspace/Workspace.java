@@ -37,6 +37,7 @@ public class Workspace {
     @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL)
     private List<Membership> memberships;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL)
     private List<Project> projects;
 

@@ -4,18 +4,17 @@ import { Calendar, ArrowRight } from "lucide-react";
 
 interface ProjectCardProps {
     project: Project;
-    workspaceSlug: string;
+    workspaceId: string; 
 }
 
-export default function ProjectCard({ project, workspaceSlug }: ProjectCardProps) {
-    // Matching your color logic from WorkspaceCard
+export default function ProjectCard({ project, workspaceId }: ProjectCardProps) { // Update here
+    // Matching your color logic
     const colors = ["bg-indigo-600", "bg-emerald-600", "bg-orange-500", "bg-purple-600"];
-    // Use project ID to stay consistent, or a different index to differentiate from the parent workspace
     const bgColor = colors[Math.abs(project.id.length + 1) % colors.length];
 
     return (
         <Link
-            href={`/${workspaceSlug}/${project.id}`}
+            href={`/${workspaceId}/${project.id}`} // Uses the ID for the link now
             className="block transition-transform hover:scale-[1.02]"
         >
             <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow h-full flex flex-col">

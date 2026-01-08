@@ -2,43 +2,62 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation"; // 1. Import usePathname
-import { ChevronRight } from "lucide-react";
+import { useParams, usePathname } from "next/navigation";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { workspaceService } from "@/services/workspace-service";
-import { Workspace } from "@/types/types";
+import { Workspace, Project } from "@/types/types";
 
 export default function Breadcrumbs() {
-  const pathname = usePathname(); 
+  const pathname = usePathname();
   const params = useParams();
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const workspaceId = params?.workspace as string;
   const projectId = params?.project as string;
 
   useEffect(() => {
-    if (pathname === "/dashboard") return;
+    if (pathname === "/dashboard" || !workspaceId) {
+      setWorkspace(null);
+      setProject(null);
+      return;
+    }
 
-    const loadData = async () => {
+    const loadBreadcrumbs = async () => {
       try {
-        const data = await workspaceService.getMyWorkspaces();
-        setWorkspaces(data);
+        setLoading(true);
+
+        // Define our fetch tasks
+        const fetchTasks: Promise<any>[] = [
+           workspaceService.getWorkspaceById(workspaceId)
+        ];
+
+        // Only fetch project if ID exists in URL
+        if (projectId) {
+          fetchTasks.push(workspaceService.getProjectById(workspaceId, projectId));
+        }
+
+        // Execute parallel requests
+        const [wsData, pData] = await Promise.all(fetchTasks);
+
+        setWorkspace(wsData);
+        setProject(pData || null);
       } catch (error) {
-        console.error("Failed to load breadcrumb data:", error);
+        console.error("Breadcrumb fetch error:", error);
+      } finally {
+        setLoading(false);
       }
     };
-    loadData();
-  }, [pathname]); 
 
-  // Hide component completely on /dashboard
-  if (pathname === "/dashboard") {
-    return null;
-  }
+    loadBreadcrumbs();
+  }, [workspaceId, projectId, pathname]);
 
-  const currentWorkspace = workspaces.find((w) => w.id === workspaceId);
-  const currentProject = currentWorkspace?.projects?.find((p) => p.id === projectId);
+  if (pathname === "/dashboard") return null;
 
   return (
-    <nav className="flex items-center text-sm font-medium">
+    <nav className="flex items-center text-sm font-medium h-6">
       <Link
         href="/dashboard"
         className="text-gray-500 hover:text-gray-900 transition-colors"
@@ -51,10 +70,11 @@ export default function Breadcrumbs() {
           <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
           <Link
             href={`/${workspaceId}`}
-            className={`transition-colors hover:text-blue-600 ${!projectId ? "text-gray-900 font-semibold" : "text-gray-500"
-              }`}
+            className={`transition-colors hover:text-indigo-600 ${
+              !projectId ? "text-gray-900 font-semibold" : "text-gray-500"
+            }`}
           >
-            {currentWorkspace ? currentWorkspace.name : "Loading..."}
+            {workspace ? workspace.name : "..."}
           </Link>
         </>
       )}
@@ -63,10 +83,12 @@ export default function Breadcrumbs() {
         <>
           <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
           <span className="text-gray-900 font-semibold">
-            {currentProject ? currentProject.name : "Loading..."}
+            {project ? project.name : "..."}
           </span>
         </>
       )}
+
+      {loading && <Loader2 className="w-3 h-3 ml-3 animate-spin text-gray-300" />}
     </nav>
   );
 }

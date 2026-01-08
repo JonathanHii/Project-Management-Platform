@@ -4,7 +4,6 @@ export interface Workspace {
   slug: string;
   memberCount: number;  
   projectCount: number;
-  projects: Project[];
 }
 
 export interface Membership {

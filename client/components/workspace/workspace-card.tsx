@@ -6,7 +6,6 @@ interface WorkspaceCardProps {
 }
 
 export default function WorkspaceCard({ workspace }: WorkspaceCardProps) {
-    // You can randomize colors or map them to the workspace name
     const colors = ["bg-indigo-600", "bg-emerald-600", "bg-orange-500", "bg-purple-600"];
     const bgColor = colors[Math.abs(workspace.id.length) % colors.length];
 

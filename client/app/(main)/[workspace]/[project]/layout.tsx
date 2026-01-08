@@ -31,26 +31,24 @@ export default function ProjectLayout({
     async function fetchProjectData() {
       try {
         setIsLoading(true);
-        const workspaces = await workspaceService.getMyWorkspaces();
-        const currentWorkspace = workspaces.find(w => w.id === workspaceId || w.slug === workspaceId);
 
-        if (currentWorkspace) {
-          setWorkspace(currentWorkspace);
-          const currentProject = currentWorkspace.projects.find(p => p.id === projectId);
-          if (currentProject) {
-            setProject(currentProject);
-          }
-        }
+        // Fetch ONLY the project and the workspace name in parallel
+        const [projectData, workspaces] = await Promise.all([
+          workspaceService.getProjectById(workspaceId, projectId),
+          workspaceService.getMyWorkspaces()
+        ]);
+
+        setProject(projectData);
+        setWorkspace(workspaces.find(w => w.id === workspaceId) || null);
+
       } catch (error) {
-        console.error("Failed to fetch project data:", error);
+        console.error("Failed to load project:", error);
       } finally {
         setIsLoading(false);
       }
     }
 
-    if (workspaceId && projectId) {
-      fetchProjectData();
-    }
+    if (workspaceId && projectId) fetchProjectData();
   }, [workspaceId, projectId]);
 
   const tabs = [
@@ -83,8 +81,8 @@ export default function ProjectLayout({
                 key={tab.href}
                 href={tab.href}
                 className={`flex items-center gap-2 pb-4 text-sm font-medium border-b-2 transition-colors ${isActive
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
               >
                 {tab.icon}
