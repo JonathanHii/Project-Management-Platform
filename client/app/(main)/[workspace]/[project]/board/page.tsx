@@ -4,12 +4,14 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { projectService } from "@/services/project-service";
 import { WorkItem, WorkItemStatus, WorkItemPriority } from "@/types/types";
+import { Search, Plus } from "lucide-react"; // Added for icons
 
 const COLUMNS: WorkItemStatus[] = ["BACKLOG", "TODO", "IN_PROGRESS", "DONE"];
 
 export default function BoardPage() {
     const params = useParams();
     const [items, setItems] = useState<WorkItem[]>([]);
+    const [searchQuery, setSearchQuery] = useState(""); // Search state
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -34,21 +36,52 @@ export default function BoardPage() {
     const groupedItems = useMemo(() => {
         const groups = {} as Record<WorkItemStatus, WorkItem[]>;
         COLUMNS.forEach((status) => (groups[status] = []));
-        items.forEach((item) => {
+
+        // Filter items based on search query before grouping
+        const filteredItems = items.filter(item => 
+            item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+
+        filteredItems.forEach((item) => {
             if (groups[item.status]) groups[item.status].push(item);
         });
+
         COLUMNS.forEach((status) => groups[status].sort((a, b) => a.position - b.position));
         return groups;
-    }, [items]);
+    }, [items, searchQuery]);
 
     if (isLoading) return <div className="p-10 animate-pulse text-slate-400">Loading board...</div>;
     if (error) return <div className="p-10 text-red-500 font-medium">Error: {error}</div>;
 
     return (
         <div className="h-[calc(100vh-220px)] w-full flex flex-col">
+            
+            {/* --- Board Toolbar --- */}
+            <div className="flex items-center justify-between mb-6 px-2">
+                <div className="relative w-72">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Search items..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                </div>
+
+                <button 
+                    onClick={() => console.log("Open Create Modal")}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm shadow-indigo-100"
+                >
+                    <Plus className="h-4 w-4" />
+                    New Item
+                </button>
+            </div>
+
+            {/* --- Kanban Columns --- */}
             <div className="flex flex-1 gap-4 overflow-x-auto pb-4 no-scrollbar">
                 {COLUMNS.map((status) => (
-                    /* Increased width from w-72 (288px) to 320px for better data density */
                     <div key={status} className="flex flex-col min-w-[320px] flex-1 max-w-[450px] h-full">
                         {/* Column Header */}
                         <div className="flex items-center justify-between mb-4 px-2">
@@ -62,14 +95,14 @@ export default function BoardPage() {
                             </div>
                         </div>
 
-                        {/* Cards Container - Now handles its own internal scroll */}
+                        {/* Cards Container */}
                         <div className="flex flex-col gap-3 overflow-y-auto px-2 custom-scrollbar pb-4">
                             {groupedItems[status].map((item) => (
                                 <WorkItemCard key={item.id} item={item} />
                             ))}
                             {groupedItems[status].length === 0 && (
                                 <div className="border-2 border-dashed border-slate-200 rounded-xl py-12 flex items-center justify-center text-slate-300 text-xs italic">
-                                    No items here
+                                    {searchQuery ? "No matches found" : "No items here"}
                                 </div>
                             )}
                         </div>
