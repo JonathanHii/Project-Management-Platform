@@ -4,14 +4,14 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { projectService } from "@/services/project-service";
 import { WorkItem, WorkItemStatus, WorkItemPriority } from "@/types/types";
-import { Search, Plus } from "lucide-react"; // Added for icons
+import { Search, Plus } from "lucide-react";
 
 const COLUMNS: WorkItemStatus[] = ["BACKLOG", "TODO", "IN_PROGRESS", "DONE"];
 
 export default function BoardPage() {
     const params = useParams();
     const [items, setItems] = useState<WorkItem[]>([]);
-    const [searchQuery, setSearchQuery] = useState(""); // Search state
+    const [searchQuery, setSearchQuery] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +37,6 @@ export default function BoardPage() {
         const groups = {} as Record<WorkItemStatus, WorkItem[]>;
         COLUMNS.forEach((status) => (groups[status] = []));
 
-        // Filter items based on search query before grouping
         const filteredItems = items.filter(item => 
             item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -55,10 +54,11 @@ export default function BoardPage() {
     if (error) return <div className="p-10 text-red-500 font-medium">Error: {error}</div>;
 
     return (
-        <div className="h-[calc(100vh-220px)] w-full flex flex-col">
+        /* Changed to h-full to occupy the exact space of the parent's main container */
+        <div className="h-full w-full flex flex-col pb-4">
             
-            {/* --- Board Toolbar --- */}
-            <div className="flex items-center justify-between mb-6 px-2">
+            {/* --- Board Toolbar (Fixed at top of board) --- */}
+            <div className="flex items-center justify-between mb-6 flex-none">
                 <div className="relative w-72">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input 
@@ -79,12 +79,12 @@ export default function BoardPage() {
                 </button>
             </div>
 
-            {/* --- Kanban Columns --- */}
-            <div className="flex flex-1 gap-4 overflow-x-auto pb-4 no-scrollbar">
+            {/* --- Kanban Columns (Horizontal Scrollable Area) --- */}
+            <div className="flex flex-1 gap-6 overflow-x-auto min-h-0 pb-4 no-scrollbar">
                 {COLUMNS.map((status) => (
-                    <div key={status} className="flex flex-col min-w-[320px] flex-1 max-w-[450px] h-full">
+                    <div key={status} className="flex flex-col min-w-[280px] flex-1 max-w-[350px] h-full">
                         {/* Column Header */}
-                        <div className="flex items-center justify-between mb-4 px-2">
+                        <div className="flex items-center justify-between mb-4 px-1 flex-none">
                             <div className="flex items-center gap-2">
                                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
                                     {status.replace("_", " ")}
@@ -95,8 +95,8 @@ export default function BoardPage() {
                             </div>
                         </div>
 
-                        {/* Cards Container */}
-                        <div className="flex flex-col gap-3 overflow-y-auto px-2 custom-scrollbar pb-4">
+                        {/* Cards Container (Vertical Scrollable Area) */}
+                        <div className="flex flex-col gap-3 overflow-y-auto px-1 custom-scrollbar min-h-0">
                             {groupedItems[status].map((item) => (
                                 <WorkItemCard key={item.id} item={item} />
                             ))}
@@ -125,7 +125,6 @@ function WorkItemCard({ item }: { item: WorkItem }) {
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-300 hover:shadow-sm cursor-pointer group transition-all duration-200">
-            {/* Header Section */}
             <div className="flex justify-between items-start mb-3">
                 <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md border ${priorityStyle}`}>
                     {item.priority}
@@ -135,17 +134,14 @@ function WorkItemCard({ item }: { item: WorkItem }) {
                 </span>
             </div>
 
-            {/* Title */}
             <h4 className="text-sm font-semibold leading-snug text-slate-800 group-hover:text-indigo-600 transition-colors mb-2">
                 {item.title}
             </h4>
 
-            {/* Description */}
             <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">
                 {item.description || "No description provided."}
             </p>
 
-            {/* Footer Section */}
             <div className="flex items-center justify-between border-t border-slate-50 pt-3">
                 <div className="flex items-center gap-2">
                     {item.assignee ? (
