@@ -21,7 +21,6 @@ export default function ProjectLayout({
   const pathname = usePathname();
 
   const [project, setProject] = useState<Project | null>(null);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const workspaceId = params.workspace as string;
@@ -31,15 +30,12 @@ export default function ProjectLayout({
     async function fetchProjectData() {
       try {
         setIsLoading(true);
-
-        // Fetch ONLY the project and the workspace name in parallel
         const [projectData, workspaces] = await Promise.all([
           workspaceService.getProjectById(workspaceId, projectId),
           workspaceService.getMyWorkspaces()
         ]);
 
         setProject(projectData);
-        setWorkspace(workspaces.find(w => w.id === workspaceId) || null);
 
       } catch (error) {
         console.error("Failed to load project:", error);
@@ -58,8 +54,8 @@ export default function ProjectLayout({
   ];
 
   return (
-    <div className="flex flex-col h-full w-full bg-white">
-      <header className="max-w-7xl w-full mx-auto px-8 pt-4 pb-0">
+    <div className="w-full bg-white no-scrollbar min-h-screen">
+      <header className="max-w-7xl w-full mx-auto px-8 pb-0">
         <div className="flex items-center justify-between mb-8 h-[40px]">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center">
             {isLoading ? (
@@ -93,8 +89,7 @@ export default function ProjectLayout({
         </nav>
       </header>
 
-      <main className="flex-1 overflow-auto bg-white">
-        {/* Match the horizontal alignment for the children */}
+      <main className="bg-white">
         <div className="max-w-7xl mx-auto px-8 pt-4 pb-8">
           {children}
         </div>

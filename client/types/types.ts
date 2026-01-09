@@ -4,6 +4,10 @@ export interface User {
   fullName: string;   // Maps to String
 }
 
+export interface CreateWorkspaceRequest {
+  name: string;
+}
+
 export interface Workspace {
   id: string;
   name: string;
