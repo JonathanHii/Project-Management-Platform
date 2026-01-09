@@ -26,7 +26,7 @@ export default function WorkspacesPage() {
   };
 
   return (
-    <div className="px-8 pb-8 max-w-7xl mx-auto">
+    <div className="px-8 pb-8 max-w-[90rem] mx-auto">
       {/* Header Section */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>

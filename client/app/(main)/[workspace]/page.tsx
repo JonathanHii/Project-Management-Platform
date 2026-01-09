@@ -59,7 +59,7 @@ export default function WorkspaceProjectsPage() {
     }
 
     return (
-        <div className="px-8 pb-8 max-w-7xl mx-auto">
+        <div className="px-8 pb-8 max-w-[90rem] mx-auto">
             <div className="flex items-center justify-between mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">
                     {workspace?.name || "Workspace"}
