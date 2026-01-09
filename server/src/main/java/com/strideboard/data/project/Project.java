@@ -1,4 +1,4 @@
-package com.strideboard.project;
+package com.strideboard.data.project;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

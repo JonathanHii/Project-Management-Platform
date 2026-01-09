@@ -1,4 +1,4 @@
-package com.strideboard.workitem;
+package com.strideboard.data.workitem;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -8,8 +8,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.strideboard.data.project.Project;
 import com.strideboard.data.user.User;
-import com.strideboard.project.Project;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

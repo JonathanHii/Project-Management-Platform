@@ -14,14 +14,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.strideboard.data.project.Project;
+import com.strideboard.data.project.ProjectRepository;
 import com.strideboard.data.user.User;
 import com.strideboard.data.user.UserRepository;
 import com.strideboard.data.workspace.Membership;
 import com.strideboard.data.workspace.MembershipRepository;
 import com.strideboard.data.workspace.Workspace;
 import com.strideboard.data.workspace.WorkspaceRepository;
-import com.strideboard.project.Project;
-import com.strideboard.project.ProjectRepository;
 
 import lombok.RequiredArgsConstructor;
 

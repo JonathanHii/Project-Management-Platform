@@ -1,4 +1,4 @@
-package com.strideboard.project;
+package com.strideboard.data.project;
 
 import java.util.List;
 import java.util.UUID;

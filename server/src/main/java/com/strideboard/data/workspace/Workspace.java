@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.strideboard.project.Project;
+import com.strideboard.data.project.Project;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;

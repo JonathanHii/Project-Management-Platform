@@ -1,4 +1,4 @@
-package com.strideboard.workitem;
+package com.strideboard.data.workitem;
 
 public enum WorkItemStatus {
     BACKLOG,

@@ -2,15 +2,8 @@ export interface Workspace {
   id: string;
   name: string;
   slug: string;
-  memberCount: number;  
+  memberCount: number;
   projectCount: number;
-}
-
-export interface Membership {
-  id: string;
-  role: 'ADMIN' | 'MEMBER' | 'VIEWER';
-  user?: any; // expand this if  need User details
-  workspace?: Workspace;
 }
 
 export interface CreateWorkspaceRequest {
@@ -22,5 +15,27 @@ export interface Project {
   name: string;
   description: string;
   createdAt: string; // ISO string from LocalDateTime
-  workspaceId?: string; 
+  workspaceId?: string;
+}
+
+export type WorkItemStatus = 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'DONE';
+export type WorkItemPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type WorkItemType = 'TASK' | 'BUG' | 'EPIC';
+
+export interface WorkItem {
+  id: string;
+  title: string;
+  description?: string;
+
+  status: WorkItemStatus;
+  priority: WorkItemPriority;
+  type: WorkItemType;
+
+  position: number;
+
+  createdAt: string;
+  updatedAt: string;
+
+  projectId: string;
+  assigneeName: string;
 }
