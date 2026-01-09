@@ -54,7 +54,6 @@ export default function BoardPage() {
     if (error) return <div className="p-10 text-red-500 font-medium">Error: {error}</div>;
 
     return (
-        /* Changed to h-full to occupy the exact space of the parent's main container */
         <div className="h-full w-full flex flex-col pb-4">
             
             {/* --- Board Toolbar (Fixed at top of board) --- */}
@@ -96,7 +95,7 @@ export default function BoardPage() {
                         </div>
 
                         {/* Cards Container (Vertical Scrollable Area) */}
-                        <div className="flex flex-col gap-3 overflow-y-auto px-1 custom-scrollbar min-h-0">
+                        <div className="flex flex-col gap-3 overflow-y-auto px-1 min-h-0">
                             {groupedItems[status].map((item) => (
                                 <WorkItemCard key={item.id} item={item} />
                             ))}

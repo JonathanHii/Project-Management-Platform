@@ -54,7 +54,7 @@ export default function ProjectLayout({
   ];
 
   return (
-    <div className="w-full bg-white no-scrollbar min-h-screen">
+    <div className="h-full w-full bg-white">
       <header className="max-w-7xl w-full mx-auto">
         <div className="flex items-center justify-between mb-8 h-[40px]">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center">
@@ -90,7 +90,7 @@ export default function ProjectLayout({
       </header>
 
       <main className="bg-white">
-        <div className="max-w-7xl mx-auto pt-4 pb-8">
+        <div className="max-w-7xl mx-auto pt-4">
           {children}
         </div>
       </main>

@@ -15,7 +15,7 @@ export default function ProjectPage() {
   }, [params, router]);
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-50">
+    <div className="flex items-center justify-center bg-gray-50">
       <div className="text-sm text-gray-400 animate-pulse">
         Entering project view...
       </div>
