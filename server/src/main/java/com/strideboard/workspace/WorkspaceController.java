@@ -25,6 +25,7 @@ import com.strideboard.data.project.Project;
 import com.strideboard.data.project.ProjectRepository;
 import com.strideboard.data.user.User;
 import com.strideboard.data.user.UserRepository;
+import com.strideboard.data.workspace.AddMembersRequest;
 import com.strideboard.data.workspace.CreateWorkspaceRequest;
 import com.strideboard.data.workspace.Membership;
 import com.strideboard.data.workspace.MembershipRepository;
@@ -395,6 +396,68 @@ public class WorkspaceController {
                 workspaceRepository.delete(workspace);
 
                 return ResponseEntity.noContent().build(); // 204 No Content
+        }
+
+        @PostMapping("/{workspaceId}/members")
+        @Transactional
+        public ResponseEntity<?> addMembersToWorkspace(
+                        @PathVariable UUID workspaceId,
+                        @RequestBody AddMembersRequest request,
+                        Authentication auth) {
+
+                // Find the current user
+                User currentUser = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Security Check: Verify current user is a member of this workspace
+                Membership currentMembership = membershipRepository
+                                .findByUserIdAndWorkspaceId(currentUser.getId(), workspaceId)
+                                .orElse(null);
+
+                if (currentMembership == null) {
+                        return ResponseEntity.status(403)
+                                        .body(Map.of("message", "You are not a member of this workspace"));
+                }
+
+                // Only allow ADMIN to add members
+                if (!"ADMIN".equalsIgnoreCase(currentMembership.getRole())) {
+                        return ResponseEntity.status(403).body(Map.of("message", "Only admins can add members"));
+                }
+
+                // Find the workspace
+                Workspace workspace = workspaceRepository.findById(workspaceId)
+                                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+                // Process each email
+                for (String email : request.getEmails()) {
+                        if (email == null || email.trim().isEmpty()) {
+                                continue;
+                        }
+
+                        String trimmedEmail = email.trim().toLowerCase();
+
+                        // Find user - skip if not found
+                        User userToAdd = userRepository.findByEmail(trimmedEmail).orElse(null);
+                        if (userToAdd == null) {
+                                continue;
+                        }
+
+                        // Skip if already a member
+                        if (membershipRepository.existsByUserIdAndWorkspaceId(userToAdd.getId(), workspaceId)) {
+                                continue;
+                        }
+
+                        // Create membership
+                        Membership newMembership = Membership.builder()
+                                        .user(userToAdd)
+                                        .workspace(workspace)
+                                        .role("MEMBER")
+                                        .build();
+
+                        membershipRepository.save(newMembership);
+                }
+
+                return ResponseEntity.ok(Map.of("message", "Members added successfully"));
         }
 
 }

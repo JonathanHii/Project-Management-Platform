@@ -46,7 +46,7 @@ export const workspaceService = {
     // Only search if 2+ chars to save API calls
     if (!query || query.length < 2) return [];
 
-    const response = await fetch(`${API_BASE_URL}/${workspaceId}/users/search? query=${encodeURIComponent(query)}`, {
+    const response = await fetch(`${API_BASE_URL}/${workspaceId}/users/search?query=${encodeURIComponent(query)}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -219,5 +219,23 @@ export const workspaceService = {
 
     // 204 No Content - successful deletion, no body to parse
     return;
-  }
+  },
+
+  async addMembersToWorkspace(workspaceId: string, emails: string[]): Promise<void> {
+    const token = authService.getToken();
+
+    const response = await fetch(`${API_BASE_URL}/${workspaceId}/members`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ emails }),
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.message || "Failed to add members");
+    }
+  },
 };
