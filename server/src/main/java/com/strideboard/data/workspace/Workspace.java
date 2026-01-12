@@ -34,11 +34,11 @@ public class Workspace {
     private String slug;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Membership> memberships;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "workspace", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Project> projects;
 
     @JsonProperty("memberCount")

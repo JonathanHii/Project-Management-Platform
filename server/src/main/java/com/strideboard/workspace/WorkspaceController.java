@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,19 +59,29 @@ public class WorkspaceController {
 
         @GetMapping("/users/search")
         @Transactional(readOnly = true)
-        public ResponseEntity<List<Map<String, String>>> searchUsers(@RequestParam String query) {
+        public ResponseEntity<List<Map<String, String>>> searchUsers(
+                        @RequestParam String query,
+                        Authentication auth) {
                 // 1. Validation
                 if (query == null || query.trim().length() < 2) {
                         return ResponseEntity.ok(Collections.emptyList());
                 }
 
-                // 2. Search Database
+                // 2. Get current user's email to exclude them from results
+                String currentUserEmail = auth.getName();
+
+                // 3. Search Database
                 List<User> users = userRepository.findByEmailContainingIgnoreCase(query);
 
-                // 3. Manual Mapping (Uses a loop to prevent type inference errors)
+                // 4. Manual Mapping (Uses a loop to prevent type inference errors)
                 List<Map<String, String>> result = new ArrayList<>();
 
                 for (User u : users) {
+                        // Skip the current user
+                        if (u.getEmail().equalsIgnoreCase(currentUserEmail)) {
+                                continue;
+                        }
+
                         Map<String, String> map = new HashMap<>();
                         map.put("id", u.getId().toString());
                         map.put("email", u.getEmail());
@@ -80,7 +91,60 @@ public class WorkspaceController {
                         result.add(map);
                 }
 
-                // 4. Limit to top 10 results manually
+                // 5. Limit to top 10 results manually
+                if (result.size() > 10) {
+                        return ResponseEntity.ok(result.subList(0, 10));
+                }
+
+                return ResponseEntity.ok(result);
+        }
+
+        @GetMapping("/{workspaceId}/users/search")
+        @Transactional(readOnly = true)
+        public ResponseEntity<List<Map<String, String>>> searchUsersNotInWorkspace(
+                        @PathVariable UUID workspaceId,
+                        @RequestParam String query,
+                        Authentication auth) {
+                // Validation
+                if (query == null || query.trim().length() < 2) {
+                        return ResponseEntity.ok(Collections.emptyList());
+                }
+
+                // Verify current user is a member of this workspace (security check)
+                User currentUser = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                if (!membershipRepository.existsByUserIdAndWorkspaceId(currentUser.getId(), workspaceId)) {
+                        return ResponseEntity.status(403).build();
+                }
+
+                // Get all current workspace member emails
+                List<Membership> memberships = membershipRepository.findByWorkspaceId(workspaceId);
+                List<String> memberEmails = memberships.stream()
+                                .map(m -> m.getUser().getEmail().toLowerCase())
+                                .collect(Collectors.toList());
+
+                // Search Database
+                List<User> users = userRepository.findByEmailContainingIgnoreCase(query);
+
+                // Manual Mapping - exclude all workspace members
+                List<Map<String, String>> result = new ArrayList<>();
+
+                for (User u : users) {
+                        // Skip users who are already members of this workspace
+                        if (memberEmails.contains(u.getEmail().toLowerCase())) {
+                                continue;
+                        }
+
+                        Map<String, String> map = new HashMap<>();
+                        map.put("id", u.getId().toString());
+                        map.put("email", u.getEmail());
+                        map.put("name", u.getFullName() != null ? u.getFullName() : "");
+
+                        result.add(map);
+                }
+
+                // Limit to top 10 results manually
                 if (result.size() > 10) {
                         return ResponseEntity.ok(result.subList(0, 10));
                 }
@@ -231,10 +295,106 @@ public class WorkspaceController {
                                 .workspace(workspace) // Crucial for the @ManyToOne relationship
                                 .build();
 
-                //  Save and Return
+                // Save and Return
                 Project savedProject = projectRepository.save(project);
 
                 return ResponseEntity.ok(savedProject);
+        }
+
+        @GetMapping("/{workspaceId}/me")
+        @Transactional(readOnly = true)
+        public ResponseEntity<Map<String, String>> getCurrentUserInWorkspace(
+                        @PathVariable UUID workspaceId,
+                        Authentication auth) {
+
+                User user = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                Membership membership = membershipRepository.findByUserIdAndWorkspaceId(user.getId(), workspaceId)
+                                .orElse(null);
+
+                if (membership == null) {
+                        return ResponseEntity.status(403).build();
+                }
+
+                Map<String, String> result = new HashMap<>();
+                result.put("id", user.getId().toString());
+                result.put("email", user.getEmail());
+                result.put("name", user.getFullName() != null ? user.getFullName() : "");
+                result.put("role", membership.getRole().substring(0, 1).toUpperCase()
+                                + membership.getRole().substring(1).toLowerCase());
+
+                return ResponseEntity.ok(result);
+        }
+
+        @GetMapping("/{workspaceId}/members")
+        @Transactional(readOnly = true)
+        public ResponseEntity<List<Map<String, String>>> getWorkspaceMembers(
+                        @PathVariable UUID workspaceId,
+                        Authentication auth) {
+
+                User currentUser = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Security Check: Verify user is a member of this workspace
+                if (!membershipRepository.existsByUserIdAndWorkspaceId(currentUser.getId(), workspaceId)) {
+                        return ResponseEntity.status(403).build();
+                }
+
+                List<Membership> memberships = membershipRepository.findByWorkspaceId(workspaceId);
+
+                List<Map<String, String>> result = new ArrayList<>();
+                for (Membership m : memberships) {
+                        User u = m.getUser();
+                        Map<String, String> map = new HashMap<>();
+                        map.put("id", u.getId().toString());
+                        map.put("email", u.getEmail());
+                        map.put("name", u.getFullName() != null ? u.getFullName() : "");
+                        map.put("role", m.getRole().substring(0, 1).toUpperCase()
+                                        + m.getRole().substring(1).toLowerCase());
+                        result.add(map);
+                }
+
+                return ResponseEntity.ok(result);
+        }
+
+        @DeleteMapping("/{workspaceId}")
+        @Transactional
+        public ResponseEntity<Void> deleteWorkspace(
+                        @PathVariable UUID workspaceId,
+                        Authentication auth) {
+
+                // Find the current user
+                User user = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Find the user's membership in this workspace
+                Membership membership = membershipRepository.findByUserIdAndWorkspaceId(user.getId(), workspaceId)
+                                .orElse(null);
+
+                // Security Check: User must be a member
+                if (membership == null) {
+                        return ResponseEntity.status(403).build(); // Forbidden - not a member
+                }
+
+                // Security Check: Only ADMIN can delete a workspace
+                if (!"ADMIN".equalsIgnoreCase(membership.getRole())) {
+                        return ResponseEntity.status(403).build(); // Forbidden - not an admin
+                }
+
+                // Find the workspace
+                Workspace workspace = workspaceRepository.findById(workspaceId)
+                                .orElse(null);
+
+                if (workspace == null) {
+                        return ResponseEntity.notFound().build();
+                }
+
+                // Delete the workspace (cascades to memberships and projects due to
+                // CascadeType.ALL)
+                workspaceRepository.delete(workspace);
+
+                return ResponseEntity.noContent().build(); // 204 No Content
         }
 
 }

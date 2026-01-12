@@ -10,6 +10,15 @@ export interface UserSummary {
   name: string;
 }
 
+export type WorkspaceRole = 'ADMIN' | 'MEMBER' | 'VIEWER';
+
+export interface WorkspaceMember {
+  id: string;
+  email: string;
+  name: string;
+  role: WorkspaceRole;
+}
+
 export interface CreateWorkspaceRequest {
   name: string;
   memberEmails?: string[]; // Optional: Array of emails to invite immediately
@@ -54,7 +63,7 @@ export interface WorkItem {
   createdAt: string;
   updatedAt: string;
 
-  assignee: User | null; 
+  assignee: User | null;
   creator: User;
 
   projectId: string;
