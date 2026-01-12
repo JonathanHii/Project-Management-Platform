@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { workspaceService } from "@/services/workspace-service";
 import { Project } from "@/types/types";
-import { 
-    Save, 
-    Trash2, 
-    AlertTriangle, 
-    Archive,
-    Palette
+import {
+    Save,
+    Trash2,
+    AlertTriangle,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -21,7 +19,6 @@ export default function SettingsPage() {
     // Form state
     const [projectName, setProjectName] = useState("");
     const [projectDescription, setProjectDescription] = useState("");
-    const [accentColor, setAccentColor] = useState("#6366f1");
 
     const workspaceId = params.workspace as string;
     const projectId = params.project as string;
@@ -32,7 +29,7 @@ export default function SettingsPage() {
                 if (workspaceId && projectId) {
                     const data = await workspaceService.getProjectById(workspaceId, projectId);
                     setProject(data);
-                    
+
                     setProjectName(data.name || "");
                     setProjectDescription(data.description || "");
                 }
@@ -47,14 +44,6 @@ export default function SettingsPage() {
 
     const handleSaveGeneral = () => {
         console.log("Save general settings", { projectName, projectDescription });
-    };
-
-    const handleSaveAppearance = () => {
-        console.log("Save appearance settings", { accentColor });
-    };
-
-    const handleArchiveProject = () => {
-        console.log("Archive project");
     };
 
     const handleDeleteProject = () => {
@@ -116,53 +105,6 @@ export default function SettingsPage() {
                     </div>
                 </section>
 
-                {/* --- Appearance Settings --- */}
-                <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                        <div className="flex items-center gap-2">
-                            <Palette className="h-4 w-4 text-slate-500" />
-                            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
-                                Appearance
-                            </h2>
-                        </div>
-                    </div>
-                    <div className="p-6 space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-3">
-                                Accent Color
-                            </label>
-                            <div className="flex items-center gap-4">
-                                <div className="flex gap-2">
-                                    {["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#0ea5e9", "#64748b"].map((color) => (
-                                        <button
-                                            key={color}
-                                            onClick={() => setAccentColor(color)}
-                                            className={`h-8 w-8 rounded-full transition-all ${
-                                                accentColor === color 
-                                                    ? "ring-2 ring-offset-2 ring-slate-400 scale-110" 
-                                                    : "hover:scale-105"
-                                            }`}
-                                            style={{ backgroundColor: color }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                            <p className="mt-3 text-xs text-slate-400">
-                                This color will be used for highlights and accents throughout the project.
-                            </p>
-                        </div>
-
-                        <div className="pt-2">
-                            <button
-                                onClick={handleSaveAppearance}
-                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm"
-                            >
-                                <Save className="h-4 w-4" />
-                                Save Changes
-                            </button>
-                        </div>
-                    </div>
-                </section>
 
                 {/* --- Danger Zone --- */}
                 <section className="bg-white border border-red-200 rounded-xl overflow-hidden">
@@ -175,29 +117,13 @@ export default function SettingsPage() {
                         </div>
                     </div>
                     <div className="p-6 space-y-4">
-                        {/* Archive Project */}
-                        <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                            <div>
-                                <h3 className="text-sm font-semibold text-slate-700">Archive Project</h3>
-                                <p className="text-xs text-slate-500 mt-0.5">
-                                    Hide this project from the sidebar. You can restore it later. 
-                                </p>
-                            </div>
-                            <button
-                                onClick={handleArchiveProject}
-                                className="flex items-center gap-2 bg-white border border-amber-300 hover:bg-amber-50 text-amber-700 px-4 py-2 rounded-lg text-sm font-medium transition-all"
-                            >
-                                <Archive className="h-4 w-4" />
-                                Archive
-                            </button>
-                        </div>
 
                         {/* Delete Project */}
                         <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50/30">
                             <div>
                                 <h3 className="text-sm font-semibold text-slate-700">Delete Project</h3>
                                 <p className="text-xs text-slate-500 mt-0.5">
-                                    Permanently delete this project and all its data. This cannot be undone. 
+                                    Permanently delete this project and all its data. This cannot be undone.
                                 </p>
                             </div>
                             <button
