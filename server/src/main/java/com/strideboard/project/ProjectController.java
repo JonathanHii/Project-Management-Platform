@@ -5,8 +5,11 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,6 +19,7 @@ import com.strideboard.data.user.User;
 import com.strideboard.data.user.UserRepository;
 import com.strideboard.data.workitem.WorkItem;
 import com.strideboard.data.workitem.WorkItemRepository;
+import com.strideboard.data.workspace.Membership;
 import com.strideboard.data.workspace.MembershipRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -55,6 +59,110 @@ public class ProjectController {
         // fetch
         List<WorkItem> items = workItemRepository.findByProject_IdOrderByPositionAsc(projectId);
         return ResponseEntity.ok(items);
+    }
+
+    // DTO for updating project name
+    public record UpdateProjectNameRequest(String name) {
+    }
+
+    // DTO for updating project description
+    public record UpdateProjectDescriptionRequest(String description) {
+    }
+
+    /**
+     * Update project name - Admin only
+     */
+    @PatchMapping("/{workspaceId}/{projectId}/name")
+    public ResponseEntity<Project> updateProjectName(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID projectId,
+            @RequestBody UpdateProjectNameRequest request,
+            Authentication auth) {
+
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if user is ADMIN
+        Membership membership = membershipRepository.findByUserIdAndWorkspaceId(user.getId(), workspaceId)
+                .orElse(null);
+        if (membership == null || !"ADMIN".equals(membership.getRole())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getWorkspace().getId().equals(workspaceId)) {
+            return ResponseEntity.status(400).build();
+        }
+
+        if (request.name() == null || request.name().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        project.setName(request.name());
+        return ResponseEntity.ok(projectRepository.save(project));
+    }
+
+    /**
+     * Update project description - Admin only
+     */
+    @PatchMapping("/{workspaceId}/{projectId}/description")
+    public ResponseEntity<Project> updateProjectDescription(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID projectId,
+            @RequestBody UpdateProjectDescriptionRequest request,
+            Authentication auth) {
+
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if user is ADMIN
+        Membership membership = membershipRepository.findByUserIdAndWorkspaceId(user.getId(), workspaceId)
+                .orElse(null);
+        if (membership == null || !"ADMIN".equals(membership.getRole())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getWorkspace().getId().equals(workspaceId)) {
+            return ResponseEntity.status(400).build();
+        }
+
+        project.setDescription(request.description());
+        return ResponseEntity.ok(projectRepository.save(project));
+    }
+
+    /**
+     * Delete project - Admin only
+     */
+    @DeleteMapping("/{workspaceId}/{projectId}")
+    public ResponseEntity<Void> deleteProject(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID projectId,
+            Authentication auth) {
+
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if user is ADMIN
+        Membership membership = membershipRepository.findByUserIdAndWorkspaceId(user.getId(), workspaceId)
+                .orElse(null);
+        if (membership == null || !"ADMIN".equals(membership.getRole())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getWorkspace().getId().equals(workspaceId)) {
+            return ResponseEntity.status(400).build();
+        }
+
+        projectRepository.delete(project);
+        return ResponseEntity.noContent().build();
     }
 
 }

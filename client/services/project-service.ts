@@ -28,4 +28,65 @@ export const projectService = {
 
         return data;
     },
+    /**
+ * Update project name - Admin only
+ */
+    async updateProjectName(workspaceId: string, projectId: string, name: string): Promise<void> {
+        const token = authService.getToken();
+
+        const response = await fetch(`${API_BASE_URL}/${workspaceId}/${projectId}/name`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({ name }),
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to update project name");
+        }
+    },
+
+    /**
+     * Update project description - Admin only
+     */
+    async updateProjectDescription(workspaceId: string, projectId: string, description: string): Promise<void> {
+        const token = authService.getToken();
+
+        const response = await fetch(`${API_BASE_URL}/${workspaceId}/${projectId}/description`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({ description }),
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to update project description");
+        }
+    },
+
+    /**
+     * Delete project - Admin only
+     */
+    async deleteProject(workspaceId: string, projectId: string): Promise<void> {
+        const token = authService.getToken();
+
+        const response = await fetch(`${API_BASE_URL}/${workspaceId}/${projectId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to delete project");
+        }
+    },
 };

@@ -268,6 +268,38 @@ export const workspaceService = {
     }
 
     return data;
+  },
+
+  async removeMemberFromWorkspace(workspaceId: string, memberId: string): Promise<void> {
+    const token = authService.getToken();
+
+    const response = await fetch(`${API_BASE_URL}/${workspaceId}/members/${memberId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error("Only admins can remove members");
+      }
+      if (response.status === 404) {
+        throw new Error("Member not found");
+      }
+      if (response.status === 400) {
+        try {
+          const data = await response.json();
+          throw new Error(data.message || "Failed to remove member");
+        } catch {
+          throw new Error("You cannot remove yourself from the workspace");
+        }
+      }
+      throw new Error("Failed to remove member");
+    }
+
+    return;
   }
 
 };

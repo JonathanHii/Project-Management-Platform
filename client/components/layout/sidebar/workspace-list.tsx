@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Folder, Plus, Loader2 } from "lucide-react";
+import { Folder, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Workspace } from "@/types/types";
 import { workspaceService } from "@/services/workspace-service";

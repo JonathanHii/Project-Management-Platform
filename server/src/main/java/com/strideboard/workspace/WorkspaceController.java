@@ -508,4 +508,45 @@ public class WorkspaceController {
                 return ResponseEntity.ok(Map.of("message", "Members added successfully"));
         }
 
+        @DeleteMapping("/{workspaceId}/members/{memberId}")
+        @Transactional
+        public ResponseEntity<?> removeMemberFromWorkspace(
+                        @PathVariable UUID workspaceId,
+                        @PathVariable UUID memberId,
+                        Authentication auth) {
+
+                // Find the current user
+                User currentUser = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Security Check: Verify current user is an ADMIN of this workspace
+                Membership currentMembership = membershipRepository
+                                .findByUserIdAndWorkspaceId(currentUser.getId(), workspaceId)
+                                .orElse(null);
+
+                if (currentMembership == null || !"ADMIN".equalsIgnoreCase(currentMembership.getRole())) {
+                        return ResponseEntity.status(403)
+                                        .body(Map.of("message", "Only admins can remove members"));
+                }
+
+                // Prevent admin from removing themselves
+                if (currentUser.getId().equals(memberId)) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "You cannot remove yourself from the workspace"));
+                }
+
+                // Find the membership to remove
+                Membership membershipToRemove = membershipRepository
+                                .findByUserIdAndWorkspaceId(memberId, workspaceId)
+                                .orElse(null);
+
+                if (membershipToRemove == null) {
+                        return ResponseEntity.notFound().build();
+                }
+
+                // Remove the membership
+                membershipRepository.delete(membershipToRemove);
+
+                return ResponseEntity.noContent().build();
+        }
 }

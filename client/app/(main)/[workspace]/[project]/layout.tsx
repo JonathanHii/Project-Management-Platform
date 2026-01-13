@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -14,8 +14,8 @@ import Link from "next/link";
 
 export default function ProjectLayout({
   children,
-}: {
-  children: React.ReactNode;
+}:  {
+  children:  React.ReactNode;
 }) {
   const params = useParams();
   const pathname = usePathname();
@@ -26,30 +26,42 @@ export default function ProjectLayout({
   const workspaceId = params.workspace as string;
   const projectId = params.project as string;
 
-  useEffect(() => {
-    async function fetchProjectData() {
-      try {
-        setIsLoading(true);
-        const [projectData, workspaces] = await Promise. all([
-          workspaceService.getProjectById(workspaceId, projectId),
-          workspaceService. getMyWorkspaces()
-        ]);
+  const fetchProjectData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const [projectData, workspaces] = await Promise. all([
+        workspaceService.getProjectById(workspaceId, projectId),
+        workspaceService.getMyWorkspaces()
+      ]);
 
-        setProject(projectData);
+      setProject(projectData);
 
-      } catch (error) {
-        console. error("Failed to load project:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    } catch (error) {
+      console.error("Failed to load project:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (workspaceId && projectId) fetchProjectData();
   }, [workspaceId, projectId]);
+
+  useEffect(() => {
+    if (workspaceId && projectId) fetchProjectData();
+  }, [workspaceId, projectId, fetchProjectData]);
+
+  useEffect(() => {
+    const handleProjectUpdate = () => {
+      fetchProjectData();
+    };
+
+    window.addEventListener("projectUpdated", handleProjectUpdate);
+
+    return () => {
+      window.removeEventListener("projectUpdated", handleProjectUpdate);
+    };
+  }, [fetchProjectData]);
 
   const tabs = [
     { name: "Board", href: `/${workspaceId}/${projectId}/board`, icon: <LayoutDashboard size={16} /> },
-    { name: "List", href: `/${workspaceId}/${projectId}/list`, icon: <List size={16} /> },
+    { name:  "List", href:  `/${workspaceId}/${projectId}/list`, icon: <List size={16} /> },
     { name: "Settings", href: `/${workspaceId}/${projectId}/settings`, icon: <Settings size={16} /> },
   ];
 
@@ -58,7 +70,7 @@ export default function ProjectLayout({
       <header className="max-w-7xl w-full mx-auto flex-none">
         <div className="flex items-center justify-between mb-5 h-[40px]">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            {isLoading ? (
+            {isLoading ?  (
               <span className="flex items-center gap-3 text-gray-400">
                 <Loader2 size={24} className="animate-spin text-indigo-600" />
                 Loading... 
@@ -70,19 +82,19 @@ export default function ProjectLayout({
         </div>
 
         <nav className="flex items-center gap-8 border-b border-gray-200">
-          {tabs. map((tab) => {
+          {tabs.map((tab) => {
             const isActive = pathname === tab.href;
             return (
               <Link
-                key={tab.href}
-                href={tab. href}
+                key={tab. href}
+                href={tab.href}
                 className={`flex items-center gap-2 pb-4 text-sm font-medium border-b-2 transition-colors ${isActive
                   ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  : "border-transparent text-gray-500 hover: text-gray-700 hover:border-gray-300"
                   }`}
               >
                 {tab.icon}
-                {tab.name}
+                {tab. name}
               </Link>
             );
           })}
