@@ -9,6 +9,8 @@ import {
     WorkItemPriority,
     WorkItemType,
     WorkspaceMember,
+    UpdateWorkItemRequest,
+    WorkspaceRole, // Ensure this is imported if it's exported, otherwise see the cast below
 } from "@/types/types";
 import {
     X,
@@ -21,6 +23,7 @@ import {
     Trash2,
     Clock,
     UserCircle,
+    Plus,
 } from "lucide-react";
 import { TYPES, STATUSES, PRIORITIES } from "./contants";
 
@@ -76,6 +79,7 @@ export default function WorkItemDetailModal({
             setType(item.type);
             setAssigneeId(item.assignee?.id);
             setShowDeleteConfirm(false);
+            setShowAssigneeDropdown(false);
         }
     }, [item]);
 
@@ -133,9 +137,28 @@ export default function WorkItemDetailModal({
         };
     }, [memberSearchQuery, members]);
 
-    const selectedAssignee = useMemo(() => {
-        return members.find((m) => m.id === assigneeId);
-    }, [members, assigneeId]);
+    // Derived state to determine who is currently assigned (Local state takes precedence)
+    const currentAssignee = useMemo(() => {
+        if (!assigneeId) return null;
+
+        // First try to find in the fetched members list
+        const foundMember = members.find((m) => m.id === assigneeId);
+        if (foundMember) return foundMember;
+
+        // Fallback: Use item's original assignee data if IDs match
+        if (item?.assignee && item.assignee.id === assigneeId) {
+            // FIX: Force cast the object to unknown first, then WorkspaceMember
+            // This bypasses the strict comparison between "MEMBER" string and the WorkspaceRole type
+            return {
+                id: item.assignee.id,
+                name: item.assignee.fullName,
+                email: item.assignee.email,
+                role: "MEMBER",
+                joinedAt: new Date().toISOString(),
+            } as unknown as WorkspaceMember;
+        }
+        return null;
+    }, [members, assigneeId, item]);
 
     const handleSelectAssignee = (memberId: string) => {
         setAssigneeId(memberId);
@@ -146,6 +169,7 @@ export default function WorkItemDetailModal({
     const handleClearAssignee = () => {
         setAssigneeId(undefined);
         setMemberSearchQuery("");
+        setShowAssigneeDropdown(false);
     };
 
     const handleSave = async () => {
@@ -153,26 +177,27 @@ export default function WorkItemDetailModal({
 
         setIsSaving(true);
         try {
-            const updatedItem: WorkItem = {
-                ...item,
+            const payload: UpdateWorkItemRequest = {
                 title: title.trim(),
                 description: description.trim() || undefined,
                 status,
                 priority,
                 type,
-                assignee: selectedAssignee
-                    ? { id: selectedAssignee.id, email: selectedAssignee.email, fullName: selectedAssignee.name }
-                    : null,
+                assigneeId: assigneeId || null,
             };
 
-            // TODO: API call to update work item
-            // await projectService.updateWorkItem(workspaceId, projectId, item.id, payload);
+            const updatedItem = await projectService.updateWorkItem(
+                workspaceId,
+                projectId,
+                item.id,
+                payload
+            );
 
             onUpdate(updatedItem);
             onClose();
         } catch (error: any) {
             console.error("Failed to update work item", error);
-            alert(error.message || "Failed to update work item.  Please try again.");
+            alert(error.message || "Failed to update work item. Please try again.");
         } finally {
             setIsSaving(false);
         }
@@ -183,9 +208,7 @@ export default function WorkItemDetailModal({
 
         setIsDeleting(true);
         try {
-            // TODO: API call to delete work item
-            // await projectService. deleteWorkItem(workspaceId, projectId, item.id);
-
+            await projectService.deleteWorkItem(workspaceId, projectId, item.id);
             onDelete(item.id);
         } catch (error: any) {
             console.error("Failed to delete work item", error);
@@ -211,7 +234,7 @@ export default function WorkItemDetailModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm transition-all duration-300">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] transform transition-all animate-in fade-in zoom-in-95 duration-200">
-                {/* 1. Header (Sticky Top) */}
+                {/* Header */}
                 <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white shrink-0 z-20 rounded-t-2xl">
                     <div>
                         <div className="flex items-center gap-2">
@@ -234,9 +257,9 @@ export default function WorkItemDetailModal({
                     </button>
                 </div>
 
-                {/* 2. Scrollable Content Area */}
-                <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1 pb-26 [scrollbar-gutter:stable]">
-                    {/* Title Input */}
+                {/* Scrollable Content */}
+                <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1 [scrollbar-gutter:stable]">
+                    {/* Title */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Title <span className="text-red-500">*</span>
@@ -247,13 +270,13 @@ export default function WorkItemDetailModal({
                                 type="text"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                placeholder="e.g.  Implement user authentication"
-                                className="w-full pl-11 pr-4 h-11 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-gray-900 placeholder: text-gray-400"
+                                placeholder="e.g. Implement user authentication"
+                                className="w-full pl-11 pr-4 h-11 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-gray-900 placeholder:text-gray-400"
                             />
                         </div>
                     </div>
 
-                    {/* Description Input */}
+                    {/* Description */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Description
@@ -263,13 +286,12 @@ export default function WorkItemDetailModal({
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Add more details about this work item..."
                             rows={4}
-                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus: ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder: text-gray-400 resize-none"
+                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 resize-none"
                         />
                     </div>
 
-                    {/* Type, Status, Priority Row */}
+                    {/* Type, Status, Priority */}
                     <div className="grid grid-cols-3 gap-4">
-                        {/* Type */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 <Layers className="w-4 h-4 inline mr-1.5 text-gray-400" />
@@ -278,7 +300,7 @@ export default function WorkItemDetailModal({
                             <select
                                 value={type}
                                 onChange={(e) => setType(e.target.value as WorkItemType)}
-                                className="w-full h-11 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus: ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 text-sm font-medium"
+                                className="w-full h-11 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 text-sm font-medium"
                             >
                                 {TYPES.map((t) => (
                                     <option key={t} value={t}>
@@ -287,8 +309,6 @@ export default function WorkItemDetailModal({
                                 ))}
                             </select>
                         </div>
-
-                        {/* Status */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 <AlertCircle className="w-4 h-4 inline mr-1.5 text-gray-400" />
@@ -297,7 +317,7 @@ export default function WorkItemDetailModal({
                             <select
                                 value={status}
                                 onChange={(e) => setStatus(e.target.value as WorkItemStatus)}
-                                className="w-full h-11 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus: ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 text-sm font-medium"
+                                className="w-full h-11 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 text-sm font-medium"
                             >
                                 {STATUSES.map((s) => (
                                     <option key={s} value={s}>
@@ -306,8 +326,6 @@ export default function WorkItemDetailModal({
                                 ))}
                             </select>
                         </div>
-
-                        {/* Priority */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 <Flag className="w-4 h-4 inline mr-1.5 text-gray-400" />
@@ -333,138 +351,107 @@ export default function WorkItemDetailModal({
                             Assignee
                         </label>
 
-                        {/* Selected Assignee Display */}
-                        {selectedAssignee ? (
-                            <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                        {currentAssignee ? (
+                            /* Case 1: Assigned */
+                            <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-xl group hover:border-indigo-200 transition-colors">
                                 <div className="flex items-center gap-3">
                                     <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-sm">
-                                        {selectedAssignee.name?.charAt(0) || "?"}
+                                        {currentAssignee.name?.charAt(0) || "?"}
                                     </div>
                                     <div>
                                         <p className="text-sm font-semibold text-gray-900">
-                                            {selectedAssignee.name || "Unknown User"}
+                                            {currentAssignee.name || "Unknown User"}
                                         </p>
                                         <p className="text-xs text-gray-500">
-                                            {selectedAssignee.email}
+                                            {currentAssignee.email}
                                         </p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleClearAssignee}
-                                    className="text-gray-400 hover: text-red-500 hover:bg-red-50 p-1. 5 rounded-lg transition-all"
+                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                    title="Remove assignee"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>
-                        ) : item.assignee ? (
-                            /* Show original assignee if not in members list */
-                            <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-sm">
-                                        {item.assignee.fullName?.charAt(0) || "?"}
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-900">
-                                            {item.assignee.fullName || "Unknown User"}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            {item.assignee.email}
-                                        </p>
-                                    </div>
+                        ) : !showAssigneeDropdown ? (
+                            /* Case 2: Unassigned ("Add" button) */
+                            <button
+                                onClick={() => setShowAssigneeDropdown(true)}
+                                className="w-full h-12 border border-dashed border-gray-300 rounded-xl flex items-center gap-3 px-3 hover:bg-gray-50 hover:border-gray-400 hover:text-gray-900 text-gray-500 transition-all group"
+                            >
+                                <div className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center bg-white group-hover:border-gray-400">
+                                    <Plus className="w-4 h-4" />
                                 </div>
-                                <button
-                                    onClick={handleClearAssignee}
-                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
+                                <span className="text-sm font-medium">Assign a member</span>
+                            </button>
                         ) : (
-                            /* Assignee Search Input */
-                            <div className="relative">
+                            /* Case 3: Searching */
+                            <div className="relative animate-in fade-in zoom-in-95 duration-150">
                                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input
                                     type="text"
                                     value={memberSearchQuery}
                                     onChange={(e) => setMemberSearchQuery(e.target.value)}
-                                    onFocus={() => setShowAssigneeDropdown(true)}
+                                    autoFocus
                                     placeholder="Search team members..."
-                                    className="w-full pl-11 pr-4 h-11 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                    className="w-full pl-11 pr-4 h-11 border border-indigo-500 ring-2 ring-indigo-500/20 rounded-xl outline-none transition-all"
                                     autoComplete="off"
                                 />
+                                <button
+                                    onClick={() => setShowAssigneeDropdown(false)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
 
-                                {/* Dropdown Results */}
-                                {showAssigneeDropdown && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-50 overflow-y-auto z-50 ring-1 ring-black/5 overscroll-contain">
-                                        {isLoadingMembers ? (
-                                            <div className="p-4 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
-                                                <Loader2 className="w-4 h-4 animate-spin" /> Loading members...
-                                            </div>
-                                        ) : filteredMembers.length === 0 ? (
-                                            <div className="p-4 text-center text-sm text-gray-400">
-                                                No members found
-                                            </div>
-                                        ) : (
-                                            <>
-                                                {/* Option to unassign */}
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-56 overflow-y-auto z-50 ring-1 ring-black/5 custom-scrollbar">
+                                    {isLoadingMembers ? (
+                                        <div className="p-4 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+                                            <Loader2 className="w-4 h-4 animate-spin" /> Loading members...
+                                        </div>
+                                    ) : filteredMembers.length === 0 ? (
+                                        <div className="p-4 text-center text-sm text-gray-400">
+                                            No members found
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {filteredMembers.map((member) => (
                                                 <button
-                                                    onClick={() => {
-                                                        setAssigneeId(undefined);
-                                                        setShowAssigneeDropdown(false);
-                                                    }}
-                                                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-50"
+                                                    key={member.id}
+                                                    onClick={() => handleSelectAssignee(member.id)}
+                                                    className="w-full px-4 py-3 text-left hover:bg-indigo-50 flex items-center gap-3 transition-colors group border-b border-gray-50 last:border-0"
                                                 >
-                                                    <div className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400">
-                                                        <User className="w-4 h-4" />
+                                                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex shrink-0 items-center justify-center text-indigo-600 group-hover:bg-white group-hover:shadow-sm transition-all font-bold text-xs">
+                                                        {member.name?.charAt(0) || "?"}
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-medium text-gray-500">
-                                                            Unassigned
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate">
+                                                            {member.name || "Unknown User"}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 truncate">
+                                                            {member.email}
                                                         </p>
                                                     </div>
                                                 </button>
-                                                {filteredMembers.map((member) => (
-                                                    <button
-                                                        key={member.id}
-                                                        onClick={() => handleSelectAssignee(member.id)}
-                                                        className="w-full px-4 py-3 text-left hover: bg-indigo-50 flex items-center gap-3 transition-colors group border-b border-gray-50 last:border-0"
-                                                    >
-                                                        <div className="w-9 h-9 rounded-full bg-indigo-100 flex shrink-0 items-center justify-center text-indigo-600 group-hover: bg-white group-hover:shadow-sm transition-all font-bold text-sm">
-                                                            {member.name?.charAt(0) || "?"}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-gray-900">
-                                                                {member.name || "Unknown User"}
-                                                            </p>
-                                                            <p className="text-xs text-gray-500">
-                                                                {member.email}
-                                                            </p>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </>
-                                        )}
-                                    </div>
-                                )}
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
 
-                                {/* Close dropdown when clicking outside */}
-                                {showAssigneeDropdown && (
-                                    <div
-                                        className="fixed inset-0 z-40"
-                                        onClick={() => setShowAssigneeDropdown(false)}
-                                    />
-                                )}
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setShowAssigneeDropdown(false)}
+                                />
                             </div>
                         )}
                     </div>
 
-                    {/* Metadata Section */}
+                    {/* Details */}
                     <div className="pt-4 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                            Details
-                        </h3>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">Details</h3>
                         <div className="grid grid-cols-2 gap-4">
-                            {/* Creator */}
                             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                                 <UserCircle className="w-5 h-5 text-gray-400" />
                                 <div>
@@ -474,8 +461,6 @@ export default function WorkItemDetailModal({
                                     </p>
                                 </div>
                             </div>
-
-                            {/* Created At */}
                             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                                 <Clock className="w-5 h-5 text-gray-400" />
                                 <div>
@@ -485,8 +470,6 @@ export default function WorkItemDetailModal({
                                     </p>
                                 </div>
                             </div>
-
-                            {/* Updated At */}
                             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                                 <Clock className="w-5 h-5 text-gray-400" />
                                 <div>
@@ -501,13 +484,11 @@ export default function WorkItemDetailModal({
 
                     {/* Danger Zone */}
                     <div className="pt-4 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-red-600 mb-3">
-                            Danger Zone
-                        </h3>
+                        <h3 className="text-sm font-semibold text-red-600 mb-3">Danger Zone</h3>
                         {showDeleteConfirm ? (
                             <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
                                 <p className="text-sm text-red-800 mb-3">
-                                    Are you sure you want to delete &ldquo;{item.title}&rdquo;?  This action cannot be undone.
+                                    Are you sure you want to delete &ldquo;{item.title}&rdquo;? This action cannot be undone.
                                 </p>
                                 <div className="flex gap-2">
                                     <button
@@ -538,7 +519,7 @@ export default function WorkItemDetailModal({
                         ) : (
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
-                                className="flex items-center gap-2 px-4 py-2.5 text-red-600 bg-red-50 hover: bg-red-100 border border-red-200 rounded-xl text-sm font-medium transition-all"
+                                className="flex items-center gap-2 px-4 py-2.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl text-sm font-medium transition-all"
                             >
                                 <Trash2 className="w-4 h-4" />
                                 Delete this work item
@@ -547,11 +528,11 @@ export default function WorkItemDetailModal({
                     </div>
                 </div>
 
-                {/* 3.  Footer (Sticky Bottom) */}
+                {/* Footer */}
                 <div className="px-6 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 shrink-0 rounded-b-2xl z-20">
                     <button
                         onClick={onClose}
-                        className="px-5 py-2. 5 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl font-medium transition-all shadow-sm"
+                        className="px-5 py-2.5 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl font-medium transition-all shadow-sm"
                     >
                         Cancel
                     </button>

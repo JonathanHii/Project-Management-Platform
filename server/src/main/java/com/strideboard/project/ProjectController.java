@@ -18,6 +18,8 @@ import com.strideboard.data.project.Project;
 import com.strideboard.data.project.ProjectRepository;
 import com.strideboard.data.user.User;
 import com.strideboard.data.user.UserRepository;
+import com.strideboard.data.workitem.CreateWorkItemRequest;
+import com.strideboard.data.workitem.UpdateWorkItemRequest;
 import com.strideboard.data.workitem.WorkItem;
 import com.strideboard.data.workitem.WorkItemPriority;
 import com.strideboard.data.workitem.WorkItemRepository;
@@ -281,5 +283,109 @@ public class ProjectController {
                 && project.getCreator().getId().equals(currentUser.getId());
 
         return ResponseEntity.ok(isCreator);
+    }
+
+    /**
+     * Update an existing work item
+     */
+    @PatchMapping("/{workspaceId}/{projectId}/work-items/{workItemId}")
+    public ResponseEntity<WorkItem> updateWorkItem(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID workItemId,
+            @RequestBody UpdateWorkItemRequest request,
+            Authentication auth) {
+
+        // Identify User
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Security: User must be member of workspace
+        if (!membershipRepository.existsByUserIdAndWorkspaceId(user.getId(), workspaceId)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // Fetch the Work Item
+        WorkItem workItem = workItemRepository.findById(workItemId)
+                .orElseThrow(() -> new RuntimeException("Work item not found"));
+
+        // Validate Hierarchy: Item -> Project -> Workspace
+        if (!workItem.getProject().getId().equals(projectId) ||
+                !workItem.getProject().getWorkspace().getId().equals(workspaceId)) {
+            return ResponseEntity.status(400).build();
+        }
+
+        // Apply Updates (Only update non-null text/enum fields)
+        if (request.title() != null && !request.title().isBlank()) {
+            workItem.setTitle(request.title());
+        }
+
+        // Allow description to be cleared if an empty string is sent, or updated if
+        // populated
+        if (request.description() != null) {
+            workItem.setDescription(request.description());
+        }
+
+        if (request.status() != null) {
+            workItem.setStatus(request.status());
+        }
+
+        if (request.priority() != null) {
+            workItem.setPriority(request.priority());
+        }
+
+        if (request.type() != null) {
+            workItem.setType(request.type());
+        }
+
+        // Handle Assignee Logic (Corrected)
+        if (request.assigneeId() != null) {
+            User assignee = userRepository.findById(request.assigneeId())
+                    .orElseThrow(() -> new RuntimeException("Assignee not found"));
+
+            if (!membershipRepository.existsByUserIdAndWorkspaceId(assignee.getId(), workspaceId)) {
+                return ResponseEntity.badRequest().build();
+            }
+            workItem.setAssignee(assignee);
+        } else {
+            workItem.setAssignee(null);
+        }
+
+        return ResponseEntity.ok(workItemRepository.save(workItem));
+    }
+
+    /**
+     * Delete a work item
+     */
+    @DeleteMapping("/{workspaceId}/{projectId}/work-items/{workItemId}")
+    public ResponseEntity<Void> deleteWorkItem(
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID workItemId,
+            Authentication auth) {
+
+        // 1. Identify User
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 2. Security: User must be member of workspace
+        if (!membershipRepository.existsByUserIdAndWorkspaceId(user.getId(), workspaceId)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // 3. Fetch Work Item
+        WorkItem workItem = workItemRepository.findById(workItemId)
+                .orElseThrow(() -> new RuntimeException("Work item not found"));
+
+        // 4. Validate Hierarchy
+        if (!workItem.getProject().getId().equals(projectId) ||
+                !workItem.getProject().getWorkspace().getId().equals(workspaceId)) {
+            return ResponseEntity.status(400).build();
+        }
+
+        // 5. Delete
+        workItemRepository.delete(workItem);
+
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,5 +1,5 @@
 import { authService } from "./authService";
-import { CreateWorkItemRequest, WorkItem } from "@/types/types";
+import { CreateWorkItemRequest, UpdateWorkItemRequest, WorkItem } from "@/types/types";
 
 const API_BASE_URL = "http://localhost:8080/api/projects";
 
@@ -133,5 +133,52 @@ export const projectService = {
         }
 
         return data; // Returns true or false
+    },
+
+    async updateWorkItem(
+        workspaceId: string,
+        projectId: string,
+        workItemId: string,
+        payload: UpdateWorkItemRequest
+    ): Promise<WorkItem> {
+        const token = authService.getToken();
+
+        const response = await fetch(`${API_BASE_URL}/${workspaceId}/${projectId}/work-items/${workItemId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Failed to update work item");
+        }
+
+        return data;
+    },
+
+    /**
+     * Delete a work item
+     */
+    async deleteWorkItem(workspaceId: string, projectId: string, workItemId: string): Promise<void> {
+        const token = authService.getToken();
+
+        const response = await fetch(`${API_BASE_URL}/${workspaceId}/${projectId}/work-items/${workItemId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            // Try to parse error message, but handle empty body gracefully
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to delete work item");
+        }
     },
 };

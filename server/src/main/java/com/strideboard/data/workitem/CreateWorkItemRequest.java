@@ -1,10 +1,6 @@
-package com.strideboard.project;
+package com.strideboard.data.workitem;
 
 import java.util.UUID;
-
-import com.strideboard.data.workitem.WorkItemPriority;
-import com.strideboard.data.workitem.WorkItemStatus;
-import com.strideboard.data.workitem.WorkItemType;
 
 public record CreateWorkItemRequest(
         String title,
