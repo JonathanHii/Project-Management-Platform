@@ -73,7 +73,6 @@ export default function SettingsPage() {
         } catch (err: any) {
             console.error("Failed to update project name", err);
             alert(err.message || "Failed to update project name.  Please try again.");
-            // Reset to original name on error
             if (project) setProjectName(project.name);
         } finally {
             setIsSavingName(false);
@@ -160,7 +159,8 @@ export default function SettingsPage() {
 
                         {/* Project Name */}
                         <div>
-                            <label htmlFor="projectName" className="block text-sm font-medium text-slate-700 mb-1.5">
+                            {/* Changed: Removed font-medium to make label regular weight */}
+                            <label htmlFor="projectName" className="block text-sm text-slate-700 mb-1.5">
                                 Project Name
                             </label>
                             <div className="flex items-center gap-3">
@@ -170,14 +170,15 @@ export default function SettingsPage() {
                                     value={projectName}
                                     onChange={(e) => setProjectName(e.target.value)}
                                     placeholder="Enter project name"
-                                    className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus: outline-none focus: ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                    /* Changed: Added text-slate-700 to match theme instead of default black */
+                                    className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                                 />
                                 <button
                                     onClick={handleSaveName}
                                     disabled={!hasNameChanged || isSavingName}
                                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm min-w-[100px] justify-center ${nameSuccess
-                                            ? "bg-green-500 hover:bg-green-600 text-white"
-                                            : "bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white"
+                                        ? "bg-green-500 hover:bg-green-600 text-white"
+                                        : "bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white"
                                         }`}
                                 >
                                     {isSavingName ? (
@@ -218,8 +219,8 @@ export default function SettingsPage() {
                                     onClick={handleSaveDescription}
                                     disabled={!hasDescriptionChanged || isSavingDescription}
                                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm min-w-[140px] justify-center ${descriptionSuccess
-                                            ? "bg-green-500 hover:bg-green-600 text-white"
-                                            : "bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white"
+                                        ? "bg-green-500 hover:bg-green-600 text-white"
+                                        : "bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white"
                                         }`}
                                 >
                                     {isSavingDescription ? (

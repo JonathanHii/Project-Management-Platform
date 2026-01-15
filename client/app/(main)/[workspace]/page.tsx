@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { FolderOpen, Plus, Search, Loader2, Settings } from "lucide-react";
-import { Workspace, Project } from "@/types/types";
+import { FolderOpen, Plus, Search, Loader2, Settings, Users } from "lucide-react";
+import { Workspace, Project, WorkspaceMember } from "@/types/types";
 import { workspaceService } from "@/services/workspace-service";
 import ProjectCard from "@/components/workspace/project-card";
 import CreateProjectModal from "@/components/workspace/create-project-modal";
 import WorkspaceSettingsModal from "@/components/workspace/workspace-settings-modal";
+// Import the new modal
+import WorkspaceMembersModal from "@/components/workspace/workspace-members-modal";
 
 export default function WorkspaceProjectsPage() {
   const params = useParams();
@@ -16,12 +18,16 @@ export default function WorkspaceProjectsPage() {
   // Data State
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [currentMember, setCurrentMember] = useState<WorkspaceMember | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // New state for the members modal
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   // --- Data Loading ---
   const loadData = useCallback(async () => {
@@ -30,12 +36,14 @@ export default function WorkspaceProjectsPage() {
     try {
       if (projects.length === 0) setLoading(true);
 
-      const [projectData, workspaceList] = await Promise.all([
+      const [projectData, workspaceList, memberData] = await Promise.all([
         workspaceService.getWorkspaceProjects(workspaceId),
         workspaceService.getMyWorkspaces(),
+        workspaceService.getCurrentUserInWorkspace(workspaceId)
       ]);
 
       setProjects(projectData);
+      setCurrentMember(memberData);
 
       const currentWs = workspaceList.find((ws) => ws.id === workspaceId);
       if (currentWs) {
@@ -72,6 +80,9 @@ export default function WorkspaceProjectsPage() {
     );
   }
 
+  // Helper to determine if user is admin
+  const isAdmin = currentMember?.role === "Admin";
+
   return (
     <div className="pb-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -88,7 +99,7 @@ export default function WorkspaceProjectsPage() {
         </button>
       </div>
 
-      {/* Search Bar & Settings Row */}
+      {/* Search Bar & Context Button Row */}
       <div className="flex items-center justify-between mb-8 gap-4">
         <div className="relative max-w-sm w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -101,14 +112,30 @@ export default function WorkspaceProjectsPage() {
           />
         </div>
 
-        <button
-          onClick={() => setIsSettingsOpen(true)}
-          className="p-2 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center gap-2"
-          title="Workspace Settings"
-        >
-          <Settings className="w-5 h-5" />
-          <span className="sr-only sm:not-sr-only sm:text-sm sm:font-medium">Settings</span>
-        </button>
+        {/* LOGIC: IF ADMIN -> SHOW SETTINGS. ELSE -> SHOW MEMBERS. */}
+        {isAdmin ? (
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center gap-2"
+            title="Workspace Settings"
+          >
+            <Settings className="w-5 h-5" />
+            <span className="sr-only sm:not-sr-only sm:text-sm sm:font-medium">
+              Settings
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsMembersModalOpen(true)}
+            className="p-2 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center gap-2"
+            title="View Members"
+          >
+            <Users className="w-5 h-5" />
+            <span className="sr-only sm:not-sr-only sm:text-sm sm:font-medium">
+              Members
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Grid Content */}
@@ -127,8 +154,12 @@ export default function WorkspaceProjectsPage() {
               <div className="bg-gray-50 p-4 rounded-full mb-4">
                 <FolderOpen className="w-8 h-8 text-gray-300" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">No projects yet</h3>
-              <p className="text-gray-500 mb-6">Create a project to start tracking work.</p>
+              <h3 className="text-lg font-semibold text-gray-900">
+                No projects yet
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Create a project to start tracking work.
+              </p>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="text-indigo-600 font-medium hover:text-indigo-700 hover:underline"
@@ -145,21 +176,30 @@ export default function WorkspaceProjectsPage() {
       )}
 
       {/* --- Modals --- */}
-      
-      <CreateProjectModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
         workspaceId={workspaceId}
         onProjectCreated={loadData}
       />
 
       {workspace && (
-        <WorkspaceSettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          workspace={workspace}
-          onWorkspaceUpdated={handleWorkspaceUpdated}
-        />
+        <>
+          {/* Admin Settings Modal */}
+          <WorkspaceSettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            workspace={workspace}
+            onWorkspaceUpdated={handleWorkspaceUpdated}
+          />
+
+          {/* Member View Modal */}
+          <WorkspaceMembersModal
+            isOpen={isMembersModalOpen}
+            onClose={() => setIsMembersModalOpen(false)}
+            workspace={workspace}
+          />
+        </>
       )}
     </div>
   );

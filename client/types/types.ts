@@ -10,7 +10,7 @@ export interface UserSummary {
   name: string;
 }
 
-export type WorkspaceRole = 'ADMIN' | 'MEMBER' | 'VIEWER';
+export type WorkspaceRole = 'Admin' | 'Member' | 'Viewer';
 
 export interface WorkspaceMember {
   id: string;
