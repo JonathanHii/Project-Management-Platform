@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -157,6 +158,7 @@ public class WorkspaceController {
         @Transactional
         public ResponseEntity<Workspace> createWorkspace(@RequestBody CreateWorkspaceRequest request,
                         Authentication auth) {
+
                 // Setup Workspace from DTO
                 Workspace workspace = new Workspace();
                 workspace.setName(request.getName());
@@ -174,6 +176,7 @@ public class WorkspaceController {
                 User currentUser = userRepository.findByEmail(auth.getName())
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+                workspace.setOwner(currentUser);
                 // Add Creator as ADMIN
                 Membership ownerMembership = Membership.builder()
                                 .user(currentUser)
@@ -293,7 +296,7 @@ public class WorkspaceController {
                 Project project = Project.builder()
                                 .name(request.getName())
                                 .description(request.getDescription())
-                                .workspace(workspace) //  @ManyToOne relationship
+                                .workspace(workspace) // @ManyToOne relationship
                                 .creator(user)
                                 .build();
 
@@ -549,5 +552,102 @@ public class WorkspaceController {
                 membershipRepository.delete(membershipToRemove);
 
                 return ResponseEntity.noContent().build();
+        }
+
+        @PutMapping("/{workspaceId}/members/{memberId}/role")
+        @Transactional
+        public ResponseEntity<?> changeMemberRole(
+                        @PathVariable UUID workspaceId,
+                        @PathVariable UUID memberId,
+                        @RequestBody Map<String, String> request,
+                        Authentication auth) {
+
+                // Find the current user (requester)
+                User currentUser = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Check Self-Modification
+                if (currentUser.getId().equals(memberId)) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "You cannot change your own role"));
+                }
+
+                // Verify requester is an ADMIN of this workspace
+                Membership currentMembership = membershipRepository
+                                .findByUserIdAndWorkspaceId(currentUser.getId(), workspaceId)
+                                .orElse(null);
+
+                if (currentMembership == null || !"ADMIN".equalsIgnoreCase(currentMembership.getRole())) {
+                        return ResponseEntity.status(403)
+                                        .body(Map.of("message", "Only admins can change member roles"));
+                }
+
+                // Validate the new role
+                String newRole = request.get("role");
+                if (newRole == null || newRole.trim().isEmpty()) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "Role is required"));
+                }
+
+                String formattedRole = newRole.trim().toUpperCase();
+                if (!List.of("ADMIN", "MEMBER", "VIEWER").contains(formattedRole)) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "Invalid role. Must be ADMIN, MEMBER, or VIEWER"));
+                }
+
+                // Find the target member's membership
+                Membership targetMembership = membershipRepository
+                                .findByUserIdAndWorkspaceId(memberId, workspaceId)
+                                .orElse(null);
+
+                if (targetMembership == null) {
+                        return ResponseEntity.notFound().build();
+                }
+
+                // Even if the requester is an Admin, they cannot change the Owner's role
+                Workspace workspace = targetMembership.getWorkspace();
+                if (workspace.getOwner().getId().equals(memberId)) {
+                        return ResponseEntity.status(403)
+                                        .body(Map.of("message", "Cannot change the role of the Workspace Owner"));
+                }
+
+                // A non-owner Admin cannot change the role of another Admin
+                boolean isTargetAdmin = "ADMIN".equalsIgnoreCase(targetMembership.getRole());
+                boolean amIOwner = workspace.getOwner().getId().equals(currentUser.getId());
+
+                if (isTargetAdmin && !amIOwner) {
+                        return ResponseEntity.status(403)
+                                        .body(Map.of("message",
+                                                        "Only the Workspace Owner can change the role of other Admins"));
+                }
+
+                // Update and Save
+                targetMembership.setRole(formattedRole);
+                membershipRepository.save(targetMembership);
+
+                return ResponseEntity.ok(Map.of("message", "Member role updated successfully", "role", formattedRole));
+        }
+
+        @GetMapping("/{workspaceId}/owner")
+        @Transactional(readOnly = true)
+        public ResponseEntity<Map<String, String>> getWorkspaceOwner(
+                        @PathVariable UUID workspaceId,
+                        Authentication auth) {
+
+                // Find Current User
+                User user = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Security Check: Verify user is a member of this workspace
+                if (!membershipRepository.existsByUserIdAndWorkspaceId(user.getId(), workspaceId)) {
+                        return ResponseEntity.status(403).build();
+                }
+
+                // Find Workspace
+                Workspace workspace = workspaceRepository.findById(workspaceId)
+                                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+                // Return just the Owner ID
+                return ResponseEntity.ok(Map.of("ownerId", workspace.getOwner().getId().toString()));
         }
 }

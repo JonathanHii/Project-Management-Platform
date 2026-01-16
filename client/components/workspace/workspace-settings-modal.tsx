@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, X, Check, FolderOpen, Trash2 } from "lucide-react";
+import { Loader2, X, Check, FolderOpen, Trash2, ChevronDown, Crown } from "lucide-react";
 import { Workspace, WorkspaceMember } from "@/types/types";
 import { workspaceService } from "@/services/workspace-service";
 import AddPeopleModal from "./add-people-modal";
@@ -27,7 +27,11 @@ export default function WorkspaceSettingsModal({
   // Member State
   const [currentUser, setCurrentUser] = useState<WorkspaceMember | null>(null);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [ownerId, setOwnerId] = useState<string | null>(null); // NEW: Track Owner ID
+
+  // Loading States
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
 
   // Sub-Modals State
   const [isAddPeopleOpen, setIsAddPeopleOpen] = useState(false);
@@ -37,12 +41,14 @@ export default function WorkspaceSettingsModal({
   const loadMemberData = useCallback(async () => {
     if (!workspace.id) return;
     try {
-      const [currentUserData, membersData] = await Promise.all([
+      const [currentUserData, membersData, ownerData] = await Promise.all([
         workspaceService.getCurrentUserInWorkspace(workspace.id),
         workspaceService.getWorkspaceMembers(workspace.id),
+        workspaceService.getWorkspaceOwner(workspace.id) // NEW: Fetch Owner
       ]);
       setCurrentUser(currentUserData);
       setMembers(membersData);
+      setOwnerId(ownerData.ownerId);
     } catch (err) {
       console.error("Error loading member data:", err);
     }
@@ -63,12 +69,12 @@ export default function WorkspaceSettingsModal({
     try {
       const updatedWorkspace = await workspaceService.updateWorkspaceName(workspace.id, settingsName.trim());
       onWorkspaceUpdated(updatedWorkspace);
-      
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (error) {
       console.error("Failed to update workspace name", error);
-      alert(error instanceof Error ? error.message : "Failed to update workspace name. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to update workspace name.");
       setSettingsName(workspace.name);
     } finally {
       setIsSavingName(false);
@@ -83,9 +89,24 @@ export default function WorkspaceSettingsModal({
       await loadMemberData();
     } catch (error) {
       console.error("Failed to remove member", error);
-      alert(error instanceof Error ? error.message : "Failed to remove member. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to remove member.");
     } finally {
       setRemovingMemberId(null);
+    }
+  };
+
+  const handleRoleChange = async (memberId: string, newRole: string) => {
+    if (updatingRoleId) return;
+
+    setUpdatingRoleId(memberId);
+    try {
+      await workspaceService.changeMemberRole(workspace.id, memberId, newRole);
+      await loadMemberData();
+    } catch (error) {
+      console.error("Failed to update role", error);
+      alert(error instanceof Error ? error.message : "Failed to update role.");
+    } finally {
+      setUpdatingRoleId(null);
     }
   };
 
@@ -109,11 +130,23 @@ export default function WorkspaceSettingsModal({
 
   if (!isOpen) return null;
 
+  const isAdmin = currentUser?.role.toUpperCase() === "ADMIN";
+  const amIOwner = currentUser?.id === ownerId;
+
+  // SORTING LOGIC: Owner first, everything else preserved
+  const sortedMembers = members
+    .filter((member) => currentUser && member.id !== currentUser.id)
+    .sort((a, b) => {
+      if (a.id === ownerId) return -1;
+      if (b.id === ownerId) return 1;
+      return 0;
+    });
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm transition-all duration-300">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] transform transition-all animate-in fade-in zoom-in-95 duration-200">
-          
+
           {/* Header */}
           <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white shrink-0 z-10 rounded-t-2xl">
             <div>
@@ -127,7 +160,7 @@ export default function WorkspaceSettingsModal({
 
           {/* Scrollable Content */}
           <div className="p-6 space-y-8 overflow-y-auto custom-scrollbar flex-1 [scrollbar-gutter:stable]">
-            
+
             {/* General Section */}
             <section>
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">General</h3>
@@ -143,10 +176,9 @@ export default function WorkspaceSettingsModal({
                     />
                     <button
                       onClick={handleUpdateWorkspaceName}
-                      disabled={!settingsName.trim() || settingsName === workspace.name || isSavingName || currentUser?.role.toUpperCase() !== "ADMIN"}
-                      className={`px-4 h-11 text-white rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 min-w-[100px] justify-center ${
-                        saveSuccess ? "bg-green-500 hover:bg-green-600" : "bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400"
-                      }`}
+                      disabled={!settingsName.trim() || settingsName === workspace.name || isSavingName || !isAdmin}
+                      className={`px-4 h-11 text-white rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 min-w-[100px] justify-center ${saveSuccess ? "bg-green-500 hover:bg-green-600" : "bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400"
+                        }`}
                     >
                       {isSavingName ? (
                         <>
@@ -196,15 +228,26 @@ export default function WorkspaceSettingsModal({
                           {currentUser.name || currentUser.email}
                           <span className="ml-2 text-xs text-indigo-600 font-normal">(You)</span>
                         </p>
-                        <p className="text-xs text-gray-500">{currentUser.role}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-500">{currentUser.role}</p>
+                          {amIOwner && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1"><Crown className="w-3 h-3" /> Owner</span>}
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {members
-                  .filter((member) => currentUser && member.id !== currentUser.id)
-                  .map((member) => (
+                {sortedMembers.map((member) => {
+                  const isTargetOwner = member.id === ownerId;
+                  const isTargetAdmin = member.role.toUpperCase() === "ADMIN";
+
+                  // PERMISSION CHECK:
+                  // 1. Must be at least an Admin to edit anyone.
+                  // 2. Can NEVER edit the Owner (unless you are the Owner, but you can't edit yourself here anyway).
+                  // 3. If I am NOT the Owner, I cannot edit other Admins.
+                  const canEditRole = isAdmin && !isTargetOwner && (amIOwner || !isTargetAdmin);
+
+                  return (
                     <div key={member.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${getAvatarColor(member.role)}`}>
@@ -212,13 +255,47 @@ export default function WorkspaceSettingsModal({
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">{member.name || member.email}</p>
-                          <p className="text-xs text-gray-500">{member.role}</p>
+                          {isTargetOwner && (
+                            <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1 mb-1">
+                              <Crown className="w-3 h-3" /> Owner
+                            </span>
+                          )}
+
+                          {/* Role Selection Logic */}
+                          {canEditRole ? (
+                            <div className="relative flex items-center mt-0.5 group">
+                              {updatingRoleId === member.id && (
+                                <div className="absolute left-0 top-0 bottom-0 flex items-center pointer-events-none z-10">
+                                  <Loader2 className="w-3 h-3 animate-spin text-gray-500" />
+                                </div>
+                              )}
+                              <select
+                                className={`
+                                    appearance-none bg-transparent text-xs text-gray-500 font-medium 
+                                    pr-4 py-0 border-none focus:ring-0 focus:outline-none cursor-pointer hover:text-indigo-600 transition-colors
+                                    ${updatingRoleId === member.id ? 'opacity-0' : ''}
+                                  `}
+                                value={member.role.toUpperCase()}
+                                onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                                disabled={updatingRoleId === member.id}
+                              >
+                                <option value="ADMIN">Admin</option>
+                                <option value="MEMBER">Member</option>
+                                <option value="VIEWER">Viewer</option>
+                              </select>
+                              <ChevronDown className={`w-3 h-3 text-gray-400 pointer-events-none -ml-3 group-hover:text-indigo-600 transition-colors ${updatingRoleId === member.id ? 'hidden' : ''}`} />
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500 mt-0.5">{member.role}</p>
+                          )}
                         </div>
                       </div>
-                      {currentUser?.role.toUpperCase() === "ADMIN" && (
+
+                      {/* Remove Button Logic: Same rules apply. Can remove if Admin, but not Owner and not other Admins (unless I am Owner) */}
+                      {canEditRole && (
                         <button
                           onClick={() => handleRemoveMember(member.id)}
-                          disabled={removingMemberId === member.id}
+                          disabled={removingMemberId === member.id || updatingRoleId === member.id}
                           className="text-gray-400 hover:text-red-600 disabled:text-gray-300 transition-colors p-1"
                           title="Remove member"
                         >
@@ -226,8 +303,9 @@ export default function WorkspaceSettingsModal({
                         </button>
                       )}
                     </div>
-                  ))}
-                {members.length <= 1 && <div className="text-center py-6 text-gray-500 text-sm">No other members in this workspace yet.</div>}
+                  )
+                })}
+                {sortedMembers.length === 0 && <div className="text-center py-6 text-gray-500 text-sm">No other members in this workspace yet.</div>}
               </div>
             </section>
 
@@ -243,26 +321,25 @@ export default function WorkspaceSettingsModal({
                 </div>
                 <button
                   onClick={() => setIsDeleteConfirmOpen(true)}
-                  disabled={currentUser?.role.toUpperCase() !== "ADMIN"}
-                  className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-lg text-sm font-medium transition-all shadow-sm whitespace-nowrap"
+                  disabled={!amIOwner} // Changed: Only OWNER can delete
+                  className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-lg text-sm font-medium transition-all shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Delete Workspace
                 </button>
               </div>
-              {currentUser?.role.toUpperCase() !== "ADMIN" && <p className="text-xs text-gray-500 mt-2">Only workspace admins can delete the workspace.</p>}
+              {!amIOwner && <p className="text-xs text-gray-500 mt-2">Only the workspace owner can delete the workspace.</p>}
             </section>
           </div>
         </div>
       </div>
 
-      {/* Nested Modals Triggered from Settings */}
       <AddPeopleModal
         isOpen={isAddPeopleOpen}
         onClose={() => setIsAddPeopleOpen(false)}
         workspaceId={workspace.id}
         onInviteSuccess={loadMemberData}
       />
-      
+
       <DeleteWorkspaceModal
         isOpen={isDeleteConfirmOpen}
         onClose={() => setIsDeleteConfirmOpen(false)}

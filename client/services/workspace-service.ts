@@ -300,6 +300,52 @@ export const workspaceService = {
     }
 
     return;
-  }
+  },
+
+  async changeMemberRole(workspaceId: string, memberId: string, role: string): Promise<void> {
+    const token = authService.getToken();
+
+    const response = await fetch(`${API_BASE_URL}/${workspaceId}/members/${memberId}/role`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ role }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+
+      if (response.status === 403) {
+        throw new Error(data.message || "Only admins can change roles");
+      }
+      if (response.status === 400) {
+        throw new Error(data.message || "Invalid role or operation");
+      }
+
+      throw new Error(data.message || "Failed to update member role");
+    }
+  },
+
+  async getWorkspaceOwner(workspaceId: string): Promise<{ ownerId: string }> {
+    const token = authService.getToken();
+
+    const response = await fetch(`${API_BASE_URL}/${workspaceId}/owner`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to fetch workspace owner");
+    }
+
+    return data;
+  },
 
 };
