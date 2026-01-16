@@ -80,8 +80,9 @@ export default function WorkspaceProjectsPage() {
     );
   }
 
-  // Helper to determine if user is admin
+  // Helper to determine roles
   const isAdmin = currentMember?.role === "Admin";
+  const isViewer = currentMember?.role === "Viewer";
 
   return (
     <div className="pb-8 max-w-7xl mx-auto">
@@ -90,13 +91,17 @@ export default function WorkspaceProjectsPage() {
         <h1 className="text-3xl font-bold text-gray-900">
           {workspace?.name || "Workspace"}
         </h1>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
-        >
-          <Plus className="w-5 h-5" />
-          New Project
-        </button>
+
+        {/* Only show create button if NOT a viewer */}
+        {!isViewer && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
+          >
+            <Plus className="w-5 h-5" />
+            New Project
+          </button>
+        )}
       </div>
 
       {/* Search Bar & Context Button Row */}
@@ -160,12 +165,16 @@ export default function WorkspaceProjectsPage() {
               <p className="text-gray-500 mb-6">
                 Create a project to start tracking work.
               </p>
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="text-indigo-600 font-medium hover:text-indigo-700 hover:underline"
-              >
-                Create one now &rarr;
-              </button>
+
+              {/* Only show create link if NOT a viewer */}
+              {!isViewer && (
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="text-indigo-600 font-medium hover:text-indigo-700 hover:underline"
+                >
+                  Create one now &rarr;
+                </button>
+              )}
             </div>
           )}
         </div>

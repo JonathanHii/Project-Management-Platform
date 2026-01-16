@@ -3,10 +3,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { projectService } from "@/services/project-service";
-import { WorkItem, WorkItemStatus, WorkItemPriority } from "@/types/types";
+import { workspaceService } from "@/services/workspace-service";
+import { WorkItem, WorkItemStatus, WorkItemPriority, WorkspaceMember } from "@/types/types";
 import { Search, Plus, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import CreateWorkItemModal from "@/components/board/CreateWorkItemModal";
 import WorkItemDetailModal from "@/components/board/WorkItemDetailModal";
+import ViewOnlyWorkItemModal from "@/components/board/ViewOnlyWorkItemModal"; // Added Import
 
 type SortField = "title" | "status" | "priority" | "createdAt" | "assignee";
 type SortDirection = "asc" | "desc";
@@ -28,6 +30,7 @@ const PRIORITY_ORDER: Record<WorkItemPriority, number> = {
 export default function ListPage() {
     const params = useParams();
     const [items, setItems] = useState<WorkItem[]>([]);
+    const [currentMember, setCurrentMember] = useState<WorkspaceMember | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -44,8 +47,14 @@ export default function ListPage() {
     const fetchListData = async () => {
         try {
             if (workspaceId && projectId) {
-                const data = await projectService.getProjectWorkItems(workspaceId, projectId);
+                // Fetch items and member data in parallel
+                const [data, memberData] = await Promise.all([
+                    projectService.getProjectWorkItems(workspaceId, projectId),
+                    workspaceService.getCurrentUserInWorkspace(workspaceId)
+                ]);
+                
                 setItems(data);
+                setCurrentMember(memberData);
             }
         } catch (err: any) {
             setError(err.message || "Failed to load list");
@@ -138,6 +147,9 @@ export default function ListPage() {
             : <ChevronDown className="h-3 w-3 text-indigo-600" />;
     };
 
+    // Determine if viewer
+    const isViewer = currentMember?.role === "Viewer";
+
     if (isLoading) return <div className="p-10 animate-pulse text-slate-400">Loading list...</div>;
     if (error) return <div className="p-10 text-red-500 font-medium">Error: {error}</div>;
 
@@ -157,13 +169,16 @@ export default function ListPage() {
                     />
                 </div>
 
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm shadow-indigo-100"
-                >
-                    <Plus className="h-4 w-4" />
-                    New Item
-                </button>
+                {/* Only show button if user is NOT a viewer */}
+                {!isViewer && (
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm shadow-indigo-100"
+                    >
+                        <Plus className="h-4 w-4" />
+                        New Item
+                    </button>
+                )}
             </div>
 
             {/* --- Table Container (Scrollable Area) --- */}
@@ -254,15 +269,24 @@ export default function ListPage() {
                 projectId={projectId}
             />
 
-            <WorkItemDetailModal
-                item={selectedItem}
-                isOpen={!!selectedItem}
-                onClose={handleCloseDetail}
-                onUpdate={handleItemUpdate}
-                onDelete={handleItemDelete}
-                workspaceId={workspaceId}
-                projectId={projectId}
-            />
+            {/* Conditional Rendering: View Only vs Editable Detail Modal */}
+            {isViewer ? (
+                <ViewOnlyWorkItemModal
+                    item={selectedItem}
+                    isOpen={!!selectedItem}
+                    onClose={handleCloseDetail}
+                />
+            ) : (
+                <WorkItemDetailModal
+                    item={selectedItem}
+                    isOpen={!!selectedItem}
+                    onClose={handleCloseDetail}
+                    onUpdate={handleItemUpdate}
+                    onDelete={handleItemDelete}
+                    workspaceId={workspaceId}
+                    projectId={projectId}
+                />
+            )}
         </div>
     );
 }

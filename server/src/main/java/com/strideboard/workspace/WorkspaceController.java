@@ -64,18 +64,17 @@ public class WorkspaceController {
         public ResponseEntity<List<Map<String, String>>> searchUsers(
                         @RequestParam String query,
                         Authentication auth) {
-                // 1. Validation
+                // Validation
                 if (query == null || query.trim().length() < 2) {
                         return ResponseEntity.ok(Collections.emptyList());
                 }
 
-                // 2. Get current user's email to exclude them from results
+                // Get current user's email to exclude them from results
                 String currentUserEmail = auth.getName();
 
-                // 3. Search Database
+                // Search Database
                 List<User> users = userRepository.findByEmailContainingIgnoreCase(query);
 
-                // 4. Manual Mapping (Uses a loop to prevent type inference errors)
                 List<Map<String, String>> result = new ArrayList<>();
 
                 for (User u : users) {

@@ -3,18 +3,21 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { projectService } from "@/services/project-service";
-import { WorkItem, WorkItemStatus } from "@/types/types";
+import { workspaceService } from "@/services/workspace-service";
+import { WorkItem, WorkItemStatus, WorkspaceMember } from "@/types/types";
 import { Search, Plus } from "lucide-react";
 
 // Imported Components & Constants
 import WorkItemCard from "@/components/board/WorkItemCard";
 import CreateWorkItemModal from "@/components/board/CreateWorkItemModal";
 import WorkItemDetailModal from "@/components/board/WorkItemDetailModal";
+import ViewOnlyWorkItemModal from "@/components/board/ViewOnlyWorkItemModal"; // Added Import
 import { COLUMNS } from "@/components/board/contants";
 
 export default function BoardPage() {
     const params = useParams();
     const [items, setItems] = useState<WorkItem[]>([]);
+    const [currentMember, setCurrentMember] = useState<WorkspaceMember | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -27,11 +30,14 @@ export default function BoardPage() {
     const fetchBoardData = async () => {
         try {
             if (workspaceId && projectId) {
-                const data = await projectService.getProjectWorkItems(
-                    workspaceId,
-                    projectId
-                );
+                // Fetch items and member data in parallel
+                const [data, memberData] = await Promise.all([
+                    projectService.getProjectWorkItems(workspaceId, projectId),
+                    workspaceService.getCurrentUserInWorkspace(workspaceId)
+                ]);
+
                 setItems(data);
+                setCurrentMember(memberData);
             }
         } catch (err: any) {
             setError(err.message || "Failed to load board");
@@ -119,6 +125,9 @@ export default function BoardPage() {
         setSelectedItem(null);
     };
 
+    // Determine if viewer
+    const isViewer = currentMember?.role === "Viewer";
+
     if (isLoading)
         return (
             <div className="p-10 animate-pulse text-slate-400">Loading board...</div>
@@ -158,13 +167,16 @@ export default function BoardPage() {
                     )}
                 </div>
 
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm shadow-indigo-100"
-                >
-                    <Plus className="h-4 w-4" />
-                    New Item
-                </button>
+                {/* Hide button if user is Viewer */}
+                {!isViewer && (
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm shadow-indigo-100"
+                    >
+                        <Plus className="h-4 w-4" />
+                        New Item
+                    </button>
+                )}
             </div>
 
             {/* --- Kanban Columns (Scrollable Area) --- */}
@@ -215,16 +227,24 @@ export default function BoardPage() {
                 projectId={projectId}
             />
 
-            {/* Work Item Detail Modal */}
-            <WorkItemDetailModal
-                item={selectedItem}
-                isOpen={!!selectedItem}
-                onClose={handleCloseDetail}
-                onUpdate={handleItemUpdate}
-                onDelete={handleItemDelete}
-                workspaceId={workspaceId}
-                projectId={projectId}
-            />
+            {/* Conditional Rendering: View Only vs Editable Detail Modal */}
+            {isViewer ? (
+                <ViewOnlyWorkItemModal
+                    item={selectedItem}
+                    isOpen={!!selectedItem}
+                    onClose={handleCloseDetail}
+                />
+            ) : (
+                <WorkItemDetailModal
+                    item={selectedItem}
+                    isOpen={!!selectedItem}
+                    onClose={handleCloseDetail}
+                    onUpdate={handleItemUpdate}
+                    onDelete={handleItemDelete}
+                    workspaceId={workspaceId}
+                    projectId={projectId}
+                />
+            )}
         </div>
     );
 }
