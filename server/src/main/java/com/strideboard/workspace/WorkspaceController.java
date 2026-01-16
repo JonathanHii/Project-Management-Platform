@@ -281,9 +281,11 @@ public class WorkspaceController {
                 User user = userRepository.findByEmail(auth.getName())
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-                // Security Check: Verify user is a member of this workspace
-                boolean isMember = membershipRepository.existsByUserIdAndWorkspaceId(user.getId(), workspaceId);
-                if (!isMember) {
+                // Security Check: Verify user is a member of this workspace and NOT a viewer
+                Membership membership = membershipRepository.findByUserIdAndWorkspaceId(user.getId(), workspaceId)
+                                .orElse(null);
+
+                if (membership == null || "VIEWER".equalsIgnoreCase(membership.getRole())) {
                         return ResponseEntity.status(403).build(); // Forbidden
                 }
 

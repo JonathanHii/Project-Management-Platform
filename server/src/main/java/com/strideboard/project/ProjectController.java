@@ -208,8 +208,17 @@ public class ProjectController {
         User creator = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Security: Is Creator in this Workspace?
-        if (!membershipRepository.existsByUserIdAndWorkspaceId(creator.getId(), workspaceId)) {
+        // Fetch Membership to check Role
+        Membership membership = membershipRepository.findByUserIdAndWorkspaceId(creator.getId(), workspaceId)
+                .orElse(null);
+
+        // Check existence in workspace
+        if (membership == null) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // Security: Must be ADMIN or MEMBER (not VIEWER)
+        if (!"ADMIN".equals(membership.getRole()) && !"MEMBER".equals(membership.getRole())) {
             return ResponseEntity.status(403).build();
         }
 
@@ -242,11 +251,10 @@ public class ProjectController {
         Double maxPosition = workItemRepository.findMaxPositionByProjectId(projectId);
         double newPosition = (maxPosition != null) ? maxPosition + 1000.0 : 1000.0;
 
-        // 7. Build and Save
+        // Build and Save
         WorkItem workItem = WorkItem.builder()
                 .title(request.title())
                 .description(request.description())
-                // Use defaults if null
                 .status(request.status() != null ? request.status() : WorkItemStatus.BACKLOG)
                 .priority(request.priority() != null ? request.priority() : WorkItemPriority.MEDIUM)
                 .type(request.type() != null ? request.type() : WorkItemType.TASK)
@@ -259,6 +267,7 @@ public class ProjectController {
         return ResponseEntity.ok(workItemRepository.save(workItem));
     }
 
+    // get creator
     @GetMapping("/{workspaceId}/{projectId}/is-creator")
     public ResponseEntity<Boolean> isProjectCreator(
             @PathVariable UUID workspaceId,
@@ -300,8 +309,17 @@ public class ProjectController {
         User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Security: User must be member of workspace
-        if (!membershipRepository.existsByUserIdAndWorkspaceId(user.getId(), workspaceId)) {
+        // Fetch Membership
+        Membership membership = membershipRepository.findByUserIdAndWorkspaceId(user.getId(), workspaceId)
+                .orElse(null);
+
+        // Check existence in workspace
+        if (membership == null) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // Security: Must be ADMIN or MEMBER (not VIEWER)
+        if (!"ADMIN".equals(membership.getRole()) && !"MEMBER".equals(membership.getRole())) {
             return ResponseEntity.status(403).build();
         }
 
@@ -315,13 +333,11 @@ public class ProjectController {
             return ResponseEntity.status(400).build();
         }
 
-        // Apply Updates (Only update non-null text/enum fields)
+        // Apply Updates
         if (request.title() != null && !request.title().isBlank()) {
             workItem.setTitle(request.title());
         }
 
-        // Allow description to be cleared if an empty string is sent, or updated if
-        // populated
         if (request.description() != null) {
             workItem.setDescription(request.description());
         }
@@ -338,7 +354,7 @@ public class ProjectController {
             workItem.setType(request.type());
         }
 
-        // Handle Assignee Logic (Corrected)
+        // Handle Assignee Logic
         if (request.assigneeId() != null) {
             User assignee = userRepository.findById(request.assigneeId())
                     .orElseThrow(() -> new RuntimeException("Assignee not found"));
@@ -364,26 +380,35 @@ public class ProjectController {
             @PathVariable UUID workItemId,
             Authentication auth) {
 
-        // 1. Identify User
+        // Identify User
         User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2. Security: User must be member of workspace
-        if (!membershipRepository.existsByUserIdAndWorkspaceId(user.getId(), workspaceId)) {
+        // Fetch Membership
+        Membership membership = membershipRepository.findByUserIdAndWorkspaceId(user.getId(), workspaceId)
+                .orElse(null);
+
+        // Check existence in workspace
+        if (membership == null) {
             return ResponseEntity.status(403).build();
         }
 
-        // 3. Fetch Work Item
+        // Security: Must be ADMIN or MEMBER (not VIEWER)
+        if (!"ADMIN".equals(membership.getRole()) && !"MEMBER".equals(membership.getRole())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // Fetch Work Item
         WorkItem workItem = workItemRepository.findById(workItemId)
                 .orElseThrow(() -> new RuntimeException("Work item not found"));
 
-        // 4. Validate Hierarchy
+        // Validate Hierarchy
         if (!workItem.getProject().getId().equals(projectId) ||
                 !workItem.getProject().getWorkspace().getId().equals(workspaceId)) {
             return ResponseEntity.status(400).build();
         }
 
-        // 5. Delete
+        // Delete
         workItemRepository.delete(workItem);
 
         return ResponseEntity.noContent().build();
