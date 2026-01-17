@@ -4,8 +4,12 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
+import com.strideboard.data.project.Project;
 import com.strideboard.data.user.User;
+import com.strideboard.data.workspace.Workspace;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,26 +46,24 @@ public class Notification {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private NotificationType type;
+    private NotificationType type;  //     INVITE, UPDATE
 
-    @Column(nullable = false)
-    private String workspaceName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE) // Delete notification if Workspace is deleted
+    private Workspace workspace;
 
-    // Nullable for Invites.
-    @Column(nullable = true)
-    private String projectName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", nullable = true)
+    @OnDelete(action = OnDeleteAction.CASCADE) // Delete notification if Project is deleted 
+    // can be null for invites
+    private Project project;
 
     @Column(nullable = false)
     private String title;
 
     @Column(nullable = false)
     private String subtitle;
-
-    @Column(nullable = true)
-    private String referenceId;
-
-    @Builder.Default
-    private boolean isUnread = true;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

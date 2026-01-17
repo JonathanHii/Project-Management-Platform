@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus, Search, Loader2 } from "lucide-react";
 import { Workspace } from "@/types/types";
 import { workspaceService } from "@/services/workspace-service";
@@ -12,11 +12,7 @@ export default function WorkspacesPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    loadWorkspaces();
-  }, []);
-
-  const loadWorkspaces = async () => {
+  const loadWorkspaces = useCallback(async () => {
     try {
       const data = await workspaceService.getMyWorkspaces();
       setWorkspaces(data);
@@ -25,7 +21,21 @@ export default function WorkspacesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadWorkspaces();
+
+    const handleWorkspaceUpdate = () => {
+      loadWorkspaces();
+    };
+
+    window.addEventListener("workspace-updated", handleWorkspaceUpdate);
+
+    return () => {
+      window.removeEventListener("workspace-updated", handleWorkspaceUpdate);
+    };
+  }, [loadWorkspaces]);
 
   if (loading) {
     return (

@@ -14,11 +14,6 @@ public class InboxItem {
     private String projectName; // can be null for invites
     private String subtitle;
     private String time; 
-    private boolean isUnread;
-
-    // Stores the ID of the Workspace for invite null if its update
-    private String referenceId;
 }
 
 
-// build this to send to client

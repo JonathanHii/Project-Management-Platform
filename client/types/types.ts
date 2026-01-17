@@ -88,13 +88,10 @@ export interface WorkItem {
 }
 
 export interface InboxItem {
-  id: number;
-  type: "invite" | "update";
+  id: string;
+  type: 'invite' | 'update'; 
   workspaceName: string;
-  projectName: string | null;
-  title: string;
+  projectName: string | null; // Nullable for invites
   subtitle: string;
   time: string;
-  isUnread: boolean;
-  referenceId: string;
 }
