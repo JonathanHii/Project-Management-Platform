@@ -27,14 +27,21 @@ public class NotificationService {
     public List<InboxItem> getUserNotifications(UUID userId) {
         List<Notification> notifications = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId);
 
-        return notifications.stream().map(n -> InboxItem.builder()
-                .id(n.getId())
-                .type(n.getType().name().toLowerCase())
-                .workspaceName(n.getWorkspace().getName())
-                .projectName(n.getProject() != null ? n.getProject().getName() : null)
-                .subtitle(n.getSubtitle())
-                .time(n.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))
-                .build())
+        return notifications.stream().map(n -> {
+            String projectName = null;
+            if (n.getWorkItem() != null && n.getWorkItem().getProject() != null) {
+                projectName = n.getWorkItem().getProject().getName();
+            }
+
+            return InboxItem.builder()
+                    .id(n.getId())
+                    .type(n.getType().name().toLowerCase())
+                    .workspaceName(n.getWorkspace().getName())
+                    .projectName(projectName)
+                    .subtitle(n.getSubtitle())
+                    .time(n.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))
+                    .build();
+        })
                 .collect(Collectors.toList());
     }
 

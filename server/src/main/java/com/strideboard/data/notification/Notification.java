@@ -7,8 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import com.strideboard.data.project.Project;
 import com.strideboard.data.user.User;
+import com.strideboard.data.workitem.WorkItem;
 import com.strideboard.data.workspace.Workspace;
 
 import jakarta.persistence.Column;
@@ -54,10 +54,10 @@ public class Notification {
     private Workspace workspace;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id", nullable = true)
-    @OnDelete(action = OnDeleteAction.CASCADE) // Delete notification if Project is deleted 
+    @JoinColumn(name = "work_item_id", nullable = true)
+    @OnDelete(action = OnDeleteAction.CASCADE) // Delete notification if workitem is deleted 
     // can be null for invites
-    private Project project;
+    private WorkItem workItem;
 
     @Column(nullable = false)
     private String title;

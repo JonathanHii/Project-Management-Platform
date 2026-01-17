@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.strideboard.data.notification.Notification;
+import com.strideboard.data.notification.NotificationRepository;
+import com.strideboard.data.notification.NotificationType;
 import com.strideboard.data.project.Project;
 import com.strideboard.data.project.ProjectRepository;
 import com.strideboard.data.user.User;
@@ -38,6 +41,7 @@ public class ProjectController {
     private final ProjectRepository projectRepository;
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final NotificationRepository notificationRepository;
 
     @GetMapping("/{workspaceId}/{projectId}/work-items")
     public ResponseEntity<List<WorkItem>> getProjectWorkItems(
@@ -264,7 +268,22 @@ public class ProjectController {
                 .assignee(assignee)
                 .build();
 
-        return ResponseEntity.ok(workItemRepository.save(workItem));
+        WorkItem savedWorkItem = workItemRepository.save(workItem);
+
+        if (assignee != null && !assignee.getId().equals(creator.getId())) {
+            Notification notification = Notification.builder()
+                    .recipient(assignee)
+                    .type(NotificationType.UPDATE) 
+                    .workspace(project.getWorkspace())
+                    .workItem(savedWorkItem)
+                    .title("New Task Assigned")
+                    .subtitle("You have been assigned to: " + savedWorkItem.getTitle())
+                    .build();
+
+            notificationRepository.save(notification);
+        }
+
+        return ResponseEntity.ok(savedWorkItem);
     }
 
     // get creator

@@ -162,25 +162,22 @@ public class WorkspaceController {
         public ResponseEntity<Workspace> createWorkspace(@RequestBody CreateWorkspaceRequest request,
                         Authentication auth) {
 
-                // Setup Workspace from DTO
+                User currentUser = userRepository.findByEmail(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
                 Workspace workspace = new Workspace();
                 workspace.setName(request.getName());
 
-                // Handle slug (use provided one or generate from name)
                 if (request.getSlug() != null && !request.getSlug().isEmpty()) {
                         workspace.setSlug(request.getSlug());
                 } else {
                         workspace.setSlug(request.getName().toLowerCase().replaceAll(" ", "-"));
                 }
 
+                workspace.setOwner(currentUser);
+
                 Workspace savedWorkspace = workspaceRepository.save(workspace);
 
-                // Find Current User (The Creator)
-                User currentUser = userRepository.findByEmail(auth.getName())
-                                .orElseThrow(() -> new RuntimeException("User not found"));
-
-                workspace.setOwner(currentUser);
-                // Add Creator as ADMIN
                 Membership ownerMembership = Membership.builder()
                                 .user(currentUser)
                                 .workspace(savedWorkspace)
@@ -189,22 +186,40 @@ public class WorkspaceController {
 
                 membershipRepository.save(ownerMembership);
 
-                // 4. Add other users from the list
                 if (request.getMemberEmails() != null && !request.getMemberEmails().isEmpty()) {
                         for (String email : request.getMemberEmails()) {
-                                // Skip if the email is the creator (already added as ADMIN)
                                 if (email.equalsIgnoreCase(currentUser.getEmail())) {
                                         continue;
                                 }
 
-                                // Check if user exists in DB before adding
-                                userRepository.findByEmail(email).ifPresent(user -> {
-                                        Membership member = Membership.builder()
-                                                        .user(user)
-                                                        .workspace(savedWorkspace)
-                                                        .role("MEMBER") // Default role for invitees
-                                                        .build();
-                                        membershipRepository.save(member);
+                                String trimmedEmail = email.trim().toLowerCase();
+
+                                userRepository.findByEmail(trimmedEmail).ifPresent(userToInvite -> {
+
+                                        boolean alreadyMember = membershipRepository.existsByUserIdAndWorkspaceId(
+                                                        userToInvite.getId(), savedWorkspace.getId());
+
+                                        if (!alreadyMember) {
+                                                boolean inviteExists = notificationRepository
+                                                                .existsByRecipientIdAndWorkspaceIdAndType(
+                                                                                userToInvite.getId(),
+                                                                                savedWorkspace.getId(),
+                                                                                NotificationType.INVITE);
+
+                                                if (!inviteExists) {
+                                                        Notification invite = Notification.builder()
+                                                                        .recipient(userToInvite)
+                                                                        .type(NotificationType.INVITE)
+                                                                        .workspace(savedWorkspace)
+                                                                                                 
+                                                                        .title("Workspace Invitation")
+                                                                        .subtitle("You have been invited to join "
+                                                                                        + savedWorkspace.getName())
+                                                                        .build();
+
+                                                        notificationRepository.save(invite);
+                                                }
+                                        }
                                 });
                         }
                 }
