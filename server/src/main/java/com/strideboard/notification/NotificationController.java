@@ -44,17 +44,19 @@ public class NotificationController {
         return ResponseEntity.noContent().build();
     }
 
-    // 3. Accept Invite
+    // Accept Invite
     @PostMapping("/{id}/accept")
     public ResponseEntity<Void> acceptInvite(@PathVariable UUID id) {
         notificationService.acceptInvite(id);
         return ResponseEntity.ok().build();
     }
 
-    // 4. Reject Invite
+    // Reject Invite
     @DeleteMapping("/{id}/reject")
     public ResponseEntity<Void> rejectInvite(@PathVariable UUID id) {
         notificationService.rejectInvite(id);
         return ResponseEntity.noContent().build();
     }
+
+    
 }

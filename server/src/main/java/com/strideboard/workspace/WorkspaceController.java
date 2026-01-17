@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.strideboard.data.notification.Notification;
+import com.strideboard.data.notification.NotificationRepository;
+import com.strideboard.data.notification.NotificationType;
 import com.strideboard.data.project.CreateProjectRequest;
 import com.strideboard.data.project.Project;
 import com.strideboard.data.project.ProjectRepository;
@@ -43,6 +46,7 @@ public class WorkspaceController {
         private final MembershipRepository membershipRepository;
         private final UserRepository userRepository;
         private final ProjectRepository projectRepository;
+        private final NotificationRepository notificationRepository;
 
         @GetMapping
         @Transactional(readOnly = true)
@@ -458,11 +462,9 @@ public class WorkspaceController {
                         @RequestBody AddMembersRequest request,
                         Authentication auth) {
 
-                // Find the current user
                 User currentUser = userRepository.findByEmail(auth.getName())
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-                // Security Check: Verify current user is a member of this workspace
                 Membership currentMembership = membershipRepository
                                 .findByUserIdAndWorkspaceId(currentUser.getId(), workspaceId)
                                 .orElse(null);
@@ -472,14 +474,14 @@ public class WorkspaceController {
                                         .body(Map.of("message", "You are not a member of this workspace"));
                 }
 
-                // Only allow ADMIN to add members
                 if (!"ADMIN".equalsIgnoreCase(currentMembership.getRole())) {
-                        return ResponseEntity.status(403).body(Map.of("message", "Only admins can add members"));
+                        return ResponseEntity.status(403).body(Map.of("message", "Only admins can invite members"));
                 }
 
-                // Find the workspace
                 Workspace workspace = workspaceRepository.findById(workspaceId)
                                 .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+                int invitesSent = 0;
 
                 // Process each email
                 for (String email : request.getEmails()) {
@@ -489,28 +491,42 @@ public class WorkspaceController {
 
                         String trimmedEmail = email.trim().toLowerCase();
 
-                        // Find user - skip if not found
-                        User userToAdd = userRepository.findByEmail(trimmedEmail).orElse(null);
-                        if (userToAdd == null) {
+                        User userToInvite = userRepository.findByEmail(trimmedEmail).orElse(null);
+                        if (userToInvite == null) {
                                 continue;
                         }
 
-                        // Skip if already a member
-                        if (membershipRepository.existsByUserIdAndWorkspaceId(userToAdd.getId(), workspaceId)) {
+                        if (membershipRepository.existsByUserIdAndWorkspaceId(userToInvite.getId(), workspaceId)) {
                                 continue;
                         }
 
-                        // Create membership
-                        Membership newMembership = Membership.builder()
-                                        .user(userToAdd)
+                        boolean inviteExists = notificationRepository.existsByRecipientIdAndWorkspaceIdAndType(
+                                        userToInvite.getId(),
+                                        workspaceId,
+                                        NotificationType.INVITE);
+
+                        if (inviteExists) {
+                                continue;
+                        }
+
+                        Notification invite = Notification.builder()
+                                        .recipient(userToInvite)
+                                        .type(NotificationType.INVITE)
                                         .workspace(workspace)
-                                        .role("MEMBER")
+                                        .title("Workspace Invitation")
+                                        .subtitle("You have been invited to join " + workspace.getName())
                                         .build();
 
-                        membershipRepository.save(newMembership);
+                        notificationRepository.save(invite);
+                        invitesSent++;
                 }
 
-                return ResponseEntity.ok(Map.of("message", "Members added successfully"));
+                if (invitesSent == 0) {
+                        return ResponseEntity.ok(Map.of("message",
+                                        "No new invitations sent (users may already be members or invited)"));
+                }
+
+                return ResponseEntity.ok(Map.of("message", invitesSent + " invitation(s) sent successfully"));
         }
 
         @DeleteMapping("/{workspaceId}/members/{memberId}")
