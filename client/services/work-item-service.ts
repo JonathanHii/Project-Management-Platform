@@ -2,7 +2,7 @@ import { authService } from "./auth-service";
 import { CreateWorkItemRequest, UpdateWorkItemRequest, WorkItem } from "@/types/types";
 
 const getBaseUrl = (workspaceId: string, projectId: string) =>
-    `http://localhost:8080/api/projects/${workspaceId}/${projectId}/work-items`;
+    `${process.env.NEXT_PUBLIC_API_URL}/projects/${workspaceId}/${projectId}/work-items`;
 
 export const workItemService = {
 

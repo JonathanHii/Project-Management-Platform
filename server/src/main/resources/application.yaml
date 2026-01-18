@@ -3,6 +3,10 @@ rsa:
   public-key: "classpath:certs/public.pem"
   private-key: "classpath:certs/private.pem"
 
+app:
+  cors:
+    # if APP_CLIENT_URL defaults to localhost 3000 when runnign locally
+    allowed-origins: ${APP_CLIENT_URL:http://localhost:3000}
 
 spring:
   application:

@@ -2,7 +2,7 @@ import { authService } from "./auth-service";
 import { Project, CreateProjectRequest } from "@/types/types";
 
 // Base URL for projects
-const API_BASE_URL = "http://localhost:8080/api/projects";
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/projects`;
 
 export const projectService = {
 

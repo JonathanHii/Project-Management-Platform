@@ -1,7 +1,7 @@
 import { authService } from "./auth-service";
-import { InboxItem } from "@/types/types"; // Ensure this matches your types file location
+import { InboxItem } from "@/types/types"; 
 
-const API_BASE_URL = "http://localhost:8080/api/notifications";
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/notifications`;
 
 export const notificationService = {
     /**

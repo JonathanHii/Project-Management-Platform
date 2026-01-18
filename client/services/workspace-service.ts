@@ -1,7 +1,7 @@
 import { Workspace, CreateWorkspaceRequest, UserSummary, WorkspaceMember } from "@/types/types";
 import { authService } from "./auth-service";
 
-const API_BASE_URL = "http://localhost:8080/api/workspaces";
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/workspaces`;
 
 export const workspaceService = {
   async getMyWorkspaces(): Promise<Workspace[]> {
