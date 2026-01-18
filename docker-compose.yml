@@ -31,6 +31,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: strideboard-client
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:
