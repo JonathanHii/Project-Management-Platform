@@ -1,0 +1,31 @@
+name: Deploy Server (EC2)
+
+on:
+  push:
+    branches:
+      - main
+    paths: # only if server file changed
+      - 'server/**'
+      - 'docker-compose.prod.yml'
+      - '.github/workflows/deploy-server.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute Remote SSH Commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            echo "Connecting to Server..."
+            cd Strideboard       
+            echo "Pulling latest code..."
+            git pull origin main
+            echo "Rebuilding Docker containers..."
+            docker compose -f docker-compose.prod.yml up -d --build
+            echo "Deployment Successful! Pruning unused images..."
+            docker image prune -f

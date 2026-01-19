@@ -43,3 +43,4 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    # tries to alter the table to match Java. It adds new columns but usually won't delete old ones.
