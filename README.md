@@ -7,7 +7,7 @@ A Project Management Platform.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/JonathanHii/Strideboard.git
+git clone https://github.com/JonathanHii/Strideboard
 cd Strideboard
 ```
 
