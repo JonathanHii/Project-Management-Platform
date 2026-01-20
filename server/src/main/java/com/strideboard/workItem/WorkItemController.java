@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,8 @@ import com.strideboard.data.workitem.WorkItemStatus;
 import com.strideboard.data.workitem.WorkItemType;
 import com.strideboard.data.workspace.Membership;
 import com.strideboard.data.workspace.MembershipRepository;
+import com.strideboard.realtime.WorkItemSocketEvent;
+import com.strideboard.realtime.WorkItemSocketEvent.EventType;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,6 +46,13 @@ public class WorkItemController {
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
+
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private void broadcastChange(UUID projectId, WorkItemSocketEvent event) {
+        // Broadcasts to: /topic/project/{projectId}
+        messagingTemplate.convertAndSend("/topic/project/" + projectId, event);
+    }
 
     @GetMapping
     public ResponseEntity<List<WorkItem>> getProjectWorkItems(
@@ -136,6 +146,7 @@ public class WorkItemController {
             notificationRepository.save(notification);
         }
 
+        broadcastChange(projectId, new WorkItemSocketEvent(EventType.CREATED, savedWorkItem, null));
         return ResponseEntity.ok(savedWorkItem);
     }
 
@@ -184,7 +195,7 @@ public class WorkItemController {
             // Explicitly remove assignee
             workItem.setAssignee(null);
         } else if (request.assigneeId() != null) {
-            //  Update to a specific new assignee
+            // Update to a specific new assignee
             User assignee = userRepository.findById(request.assigneeId())
                     .orElseThrow(() -> new RuntimeException("Assignee not found"));
 
@@ -226,6 +237,8 @@ public class WorkItemController {
             }
         }
 
+        broadcastChange(projectId, new WorkItemSocketEvent(EventType.UPDATED, savedWorkItem, null));
+
         return ResponseEntity.ok(savedWorkItem);
     }
 
@@ -254,6 +267,9 @@ public class WorkItemController {
         }
 
         workItemRepository.delete(workItem);
+
+        broadcastChange(projectId, new WorkItemSocketEvent(EventType.DELETED, null, workItemId.toString()));
+
         return ResponseEntity.noContent().build();
     }
 

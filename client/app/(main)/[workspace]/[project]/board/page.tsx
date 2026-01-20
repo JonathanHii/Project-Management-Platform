@@ -14,6 +14,8 @@ import WorkItemDetailModal from "@/components/board/WorkItemDetailModal";
 import ViewOnlyWorkItemModal from "@/components/board/ViewOnlyWorkItemModal";
 import { COLUMNS } from "@/components/board/contants";
 
+import { useProjectSocket } from "@/hooks/use-project-socket";
+
 export default function BoardPage() {
     const params = useParams();
     const [items, setItems] = useState<WorkItem[]>([]);
@@ -153,6 +155,32 @@ export default function BoardPage() {
             setItems(previousItems);
         }
     };
+
+    // Websocket
+    useProjectSocket(projectId, (event) => {
+        setItems((currentItems) => {
+            switch (event.type) {
+                case 'CREATED':
+                    if (event.workItem && !currentItems.find(i => i.id === event.workItem!.id)) {
+                        return [...currentItems, event.workItem];
+                    }
+                    return currentItems;
+
+                case 'UPDATED':
+                    if (!event.workItem) return currentItems;
+                    return currentItems.map(item =>
+                        item.id === event.workItem!.id ? event.workItem! : item
+                    ).sort((a, b) => a.position - b.position); // Re-sort to ensure position is correct
+
+                case 'DELETED':
+                    return currentItems.filter(item => item.id !== event.workItemId);
+
+                default:
+                    return currentItems;
+            }
+        });
+    });
+
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value);
     const handleClearSearch = () => setSearchQuery("");
