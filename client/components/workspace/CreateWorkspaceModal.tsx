@@ -141,7 +141,6 @@ export default function CreateWorkspaceModal({
               onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. Acme Engineering"
               className="w-full px-4 h-11 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-gray-900 placeholder:text-gray-400"
-              autoFocus
             />
           </div>
 
