@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-// ADDED: ChevronLeft
 import { ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { workspaceService } from "@/services/workspace-service";
 import { projectService } from "@/services/project-service";
@@ -63,55 +62,59 @@ export default function Breadcrumbs() {
   if (pathname === "/workspaces") return null;
   if (pathname === "/profile") return null;
 
-  // Helper to determine where the back button goes
   const getBackPath = () => {
-    if (projectId) return `/${workspaceId}`; // If on project, go to workspace
-    return "/workspaces"; // If on workspace, go to root
+    if (projectId) return `/${workspaceId}`;
+    return "/workspaces";
   };
 
   return (
     <nav className="flex items-center text-sm font-medium h-6">
-      
-      {/* --- MOBILE VIEW: Back Button Only --- */}
+
       <div className="md:hidden flex items-center">
-        <Link 
-            href={getBackPath()} 
-            className="flex items-center text-gray-500 hover:text-gray-900 transition-colors"
+        <Link
+          href={getBackPath()}
+          className="flex items-center text-gray-500 hover:text-gray-900 transition-colors"
         >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Back
+          Back
         </Link>
+        {projectId && (
+          <>
+            <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
+            <span className="text-gray-900 font-semibold">
+              {project ? project.name : "..."}
+            </span>
+          </>
+        )}
       </div>
 
-      {/* --- DESKTOP VIEW: Full Breadcrumbs --- */}
       <div className="hidden md:flex items-center">
         <Link
-            href="/workspaces"
-            className="text-gray-500 hover:text-gray-900 transition-colors"
+          href="/workspaces"
+          className="text-gray-500 hover:text-gray-900 transition-colors"
         >
-            Workspaces
+          Workspaces
         </Link>
 
         {workspaceId && (
-            <>
+          <>
             <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
             <Link
-                href={`/${workspaceId}`}
-                className={`transition-colors hover:text-indigo-600 ${!projectId ? "text-gray-900 font-semibold" : "text-gray-500"
+              href={`/${workspaceId}`}
+              className={`transition-colors hover:text-indigo-600 ${!projectId ? "text-gray-900 font-semibold" : "text-gray-500"
                 }`}
             >
-                {workspace ? workspace.name : "... "}
+              {workspace ? workspace.name : "... "}
             </Link>
-            </>
+          </>
         )}
 
         {projectId && (
-            <>
+          <>
             <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
             <span className="text-gray-900 font-semibold">
-                {project ? project.name : "... "}
+              {project ? project.name : "... "}
             </span>
-            </>
+          </>
         )}
       </div>
 

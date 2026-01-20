@@ -69,18 +69,7 @@ export default function ProjectLayout({
   return (
     <div className="h-full w-full bg-white flex flex-col overflow-hidden">
       <header className="max-w-7xl w-full mx-auto flex-none">
-        <div className="flex items-center justify-between mb-3 md:mb-5 h-[40px]">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            {isLoading ? (
-              <span className="flex items-center gap-3 text-gray-400">
-                <Loader2 size={24} className="animate-spin text-indigo-600" />
-                Loading...
-              </span>
-            ) : (
-              project?.name || "Project Not Found"
-            )}
-          </h1>
-        </div>
+
 
         <nav className="flex items-center gap-8 border-b border-gray-200">
           {tabs.map((tab) => {
