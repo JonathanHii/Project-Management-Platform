@@ -157,7 +157,7 @@ export default function BoardPage() {
     };
 
     // Websocket
-    useProjectSocket(projectId, (event) => {
+    const socketResult = useProjectSocket(projectId, (event) => {
         setItems((currentItems) => {
             switch (event.type) {
                 case 'CREATED':
@@ -170,7 +170,7 @@ export default function BoardPage() {
                     if (!event.workItem) return currentItems;
                     return currentItems.map(item =>
                         item.id === event.workItem!.id ? event.workItem! : item
-                    ).sort((a, b) => a.position - b.position); // Re-sort to ensure position is correct
+                    ).sort((a, b) => a.position - b.position);
 
                 case 'DELETED':
                     return currentItems.filter(item => item.id !== event.workItemId);
@@ -181,6 +181,7 @@ export default function BoardPage() {
         });
     });
 
+    const isConnected = (socketResult as any)?.isConnected ?? true;
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value);
     const handleClearSearch = () => setSearchQuery("");
@@ -224,14 +225,24 @@ export default function BoardPage() {
                         <span className="text-xs text-slate-500">Found {totalFilteredCount} of {items.length} items</span>
                     )}
                 </div>
-                {!isViewer && (
-                    <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm shadow-indigo-100"
-                    >
-                        <Plus className="h-4 w-4" /> New Item
-                    </button>
-                )}
+
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 px-2">
+                        <div className={`h-1.5 w-1.5 rounded-full ${isConnected ? "bg-green-500" : "bg-red-400"}`} />
+                        <span className={`text-xs font-medium ${isConnected ? "text-green-600" : "text-red-500"}`}>
+                            {isConnected ? "Connected" : "Disconnected"}
+                        </span>
+                    </div>
+
+                    {!isViewer && (
+                        <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm shadow-indigo-100"
+                        >
+                            <Plus className="h-4 w-4" /> New Item
+                        </button>
+                    )}
+                </div>
             </div>
 
             {isBrowser ? (
