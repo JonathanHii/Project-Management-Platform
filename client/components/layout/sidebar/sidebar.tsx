@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react";
 import Logo from "./logo";
-import MyWork from "./my-work";
+import MyWork from "./workspaces";
 import WorkspaceList from "./workspace-list";
 
 export default function Sidebar() {
@@ -47,23 +47,19 @@ export default function Sidebar() {
           md:static md:translate-x-0 md:h-auto
         `}
       >
-        {/* Close Button (Mobile Only) */}
-        <div className="absolute top-2 right-2 md:hidden">
+        <div className="p-4 flex items-center justify-between">
+          <Logo />
+
           <button
             onClick={() => setIsOpen(false)}
-            className="p-1 text-gray-500 hover:text-gray-700"
+            className="p-1 text-gray-500 hover:text-gray-700 md:hidden"
           >
-            {/* X Icon */}
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Original Content */}
-        <div className="p-4">
-          <Logo />
-        </div>
         <nav className="flex-1 px-2 py-4 space-y-8 overflow-y-auto">
           <MyWork />
           <WorkspaceList />
