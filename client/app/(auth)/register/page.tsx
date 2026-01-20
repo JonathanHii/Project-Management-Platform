@@ -18,8 +18,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await authService.register(email, password, fullName);
-      alert("Registration successful! Please log in.");
-      router.push("/login");
+      router.push("/workspaces");
     } catch (err: any) {
       alert(err.message || "Registration failed. Try again.");
     } finally {

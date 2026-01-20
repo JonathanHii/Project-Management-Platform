@@ -22,7 +22,7 @@ public class TokenService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("strideboard")
                 .issuedAt(now)
-                .expiresAt(now.plus(24, ChronoUnit.HOURS)) // expires 1 hour
+                .expiresAt(now.plus(24, ChronoUnit.HOURS)) // expires hourly form
                 .subject(authentication.getName())
                 .build();
         return this.encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();

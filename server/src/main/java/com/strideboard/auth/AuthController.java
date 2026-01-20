@@ -1,11 +1,16 @@
 package com.strideboard.auth;
 
+import java.util.Collections;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.strideboard.data.user.User;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -24,8 +29,15 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public void register(@RequestBody RegisterRequest registration) {
-        userDetailsService.registerUser(registration);
+    public String register(@RequestBody RegisterRequest registration) {
+        User user = userDetailsService.registerUser(registration);
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user.getEmail(),
+                null,
+                Collections.emptyList());
+
+        return tokenService.generateToken(authentication);
     }
 
     @GetMapping("/check")

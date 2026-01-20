@@ -33,7 +33,7 @@ public class JpaUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
     }
 
-    public void registerUser(RegisterRequest request) {
+    public User registerUser(RegisterRequest request) {
         // Check if user already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already in use");
@@ -45,7 +45,7 @@ public class JpaUserDetailsService implements UserDetailsService {
                 .fullName(request.getFullName())
                 .build();
 
-        userRepository.save(user);
+        return userRepository.save(user);
     }
 
     // Get the current user's info

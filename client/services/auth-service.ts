@@ -15,7 +15,6 @@ export const authService = {
 
     const token = await response.text();
 
-    // SAVE TO COOKIE so middleware can read it
     Cookies.set('stride_token', token, { expires: 1, secure: true, sameSite: 'strict' });
 
     return token;
@@ -29,7 +28,12 @@ export const authService = {
     });
 
     if (!response.ok) throw new Error("Registration failed");
-    return true;
+
+    const token = await response.text();
+
+    Cookies.set('stride_token', token, { expires: 1, secure: true, sameSite: 'strict' });
+
+    return token;
   },
 
   getToken() {
