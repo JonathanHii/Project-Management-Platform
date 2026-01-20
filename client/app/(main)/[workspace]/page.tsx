@@ -97,10 +97,10 @@ export default function WorkspaceProjectsPage() {
         {!isViewer && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 sm:px-4 sm:py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
           >
             <Plus className="w-5 h-5" />
-            New Project
+            <span className="hidden sm:inline">New Project</span>
           </button>
         )}
       </div>
