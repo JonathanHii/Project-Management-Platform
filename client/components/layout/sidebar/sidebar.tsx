@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { useState } from "react";
 import Logo from "./logo";
 import MyWork from "./workspaces";
@@ -6,6 +6,8 @@ import WorkspaceList from "./workspace-list";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+
+  const closeSidebar = () => setIsOpen(false);
 
   return (
     <>
@@ -61,8 +63,8 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 px-2 py-4 space-y-8 overflow-y-auto">
-          <MyWork />
-          <WorkspaceList />
+          <MyWork onNavigate={closeSidebar} />
+          <WorkspaceList onNavigate={closeSidebar} />
         </nav>
       </aside>
     </>
