@@ -103,25 +103,24 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="pb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="pb-8 max-w-7xl mx-auto">
             {/* Header Section */}
-            {/* UPDATED: Stack on mobile (flex-col), row on desktop (sm:flex-row) */}
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
+            <div className="flex items-center justify-between mb-5 md:mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
-                    <p className="text-gray-500 mt-1">Manage your account settings and preferences.</p>
+                    <p className="text-gray-500 mt-1 hidden sm:block">Manage your account settings and preferences.</p>
                 </div>
 
                 <button
                     onClick={() => router.back()}
-                    className="self-start sm:self-center flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors hover:underline"
+                    className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors hover:underline"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Go Back
+                    <span>Go Back</span>
                 </button>
             </div>
 
-            {/* Grid Layout - Already responsive (grid-cols-1 by default) */}
+            {/* Grid Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 {/* --- Column 1: General Information --- */}
@@ -139,7 +138,6 @@ export default function ProfilePage() {
 
                         <div className="p-6">
                             <form onSubmit={handleInfoUpdate} className="space-y-6">
-                                {/* UPDATED: Stack inputs on mobile, side-by-side on desktop */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-700">Display Name</label>

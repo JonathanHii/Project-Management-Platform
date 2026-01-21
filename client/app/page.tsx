@@ -86,7 +86,7 @@ export default function LandingPage() {
     alt="Strideboard Dashboard Interface"
     width={2541} // Set these to the approximate aspect ratio of your image
     height={1422}
-    quality={90}
+    quality={75}
     priority={true} // Loads this image immediately (good for LCP)
     className="w-full h-auto block"
   />
